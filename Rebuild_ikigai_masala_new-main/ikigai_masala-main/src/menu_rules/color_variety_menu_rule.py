@@ -2,10 +2,13 @@
 Color variety menu rule implementation.
 """
 
+import logging
 from typing import Dict, Any, List
 import re
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
+
+logger = logging.getLogger(__name__)
 
 
 class ColorVarietyMenuRule(BaseMenuRule):
@@ -34,24 +37,18 @@ class ColorVarietyMenuRule(BaseMenuRule):
     def validate_config(self) -> bool:
         """Validate the color variety rule configuration"""
         if not isinstance(self.min_distinct_colors, dict):
-            print(f"Warning: Color variety rule '{self.name}' missing min_distinct_colors mapping")
+            logger.warning("Color variety rule '%s' missing min_distinct_colors mapping", self.name)
             return False
         if not self.min_distinct_colors:
-            print(f"Warning: Color variety rule '{self.name}' has empty min_distinct_colors mapping")
+            logger.warning("Color variety rule '%s' has empty min_distinct_colors mapping", self.name)
             return False
         for meal_type, value in self.min_distinct_colors.items():
             try:
                 if int(value) <= 0:
-                    print(
-                        f"Warning: Color variety rule '{self.name}' has invalid min_distinct_colors "
-                        f"for meal_type '{meal_type}'"
-                    )
+                    logger.warning("Color variety rule '%s' has invalid min_distinct_colors for meal_type '%s'", self.name, meal_type)
                     return False
             except (TypeError, ValueError):
-                print(
-                    f"Warning: Color variety rule '{self.name}' has invalid min_distinct_colors "
-                    f"for meal_type '{meal_type}'"
-                )
+                logger.warning("Color variety rule '%s' has invalid min_distinct_colors for meal_type '%s'", self.name, meal_type)
                 return False
         return True
 
@@ -64,7 +61,7 @@ class ColorVarietyMenuRule(BaseMenuRule):
         item_color values are selected across the meal.
         """
         if not hasattr(menu_data, 'columns') or 'item_color' not in menu_data.columns:
-            print(f"Warning: Menu data missing 'item_color' for rule '{self.name}'")
+            logger.warning("Menu data missing 'item_color' for rule '%s'", self.name)
             return
 
         if 'daily_items' not in variables:
@@ -72,12 +69,12 @@ class ColorVarietyMenuRule(BaseMenuRule):
 
         color_map = self._group_items_by_color(menu_data)
         if not color_map:
-            print(f"Warning: No items found for color variety rule '{self.name}'")
+            logger.warning("No items found for color variety rule '%s'", self.name)
             return
 
         min_distinct_colors = self._resolve_min_distinct_colors(context)
         if min_distinct_colors <= 0:
-            print(f"Warning: Color variety rule '{self.name}' missing min_distinct_colors")
+            logger.warning("Color variety rule '%s' missing min_distinct_colors", self.name)
             return
 
         planning_dates = context.get('planning_dates', [])
@@ -107,7 +104,7 @@ class ColorVarietyMenuRule(BaseMenuRule):
             if color_used_vars:
                 model.Add(sum(color_used_vars) >= min_distinct_colors)
 
-        print(f"Applied color variety rule: {self.name}")
+        logger.info("Applied color variety rule: %s", self.name)
 
     def _group_items_by_color(self, menu_data: Any) -> Dict[str, List[str]]:
         """

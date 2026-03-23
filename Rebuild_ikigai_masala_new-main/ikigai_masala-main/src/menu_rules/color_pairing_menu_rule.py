@@ -2,9 +2,12 @@
 Color pairing menu rule implementation.
 """
 
+import logging
 from typing import Dict, Any, List
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
+
+logger = logging.getLogger(__name__)
 
 
 class ColorPairingMenuRule(BaseMenuRule):
@@ -30,10 +33,10 @@ class ColorPairingMenuRule(BaseMenuRule):
     def validate_config(self) -> bool:
         """Validate the color pairing rule configuration"""
         if not self.course_type_a or not self.course_type_b:
-            print(f"Warning: Color pairing rule '{self.name}' missing course types")
+            logger.warning("Color pairing rule '%s' missing course types", self.name)
             return False
         if self.course_type_a == self.course_type_b:
-            print(f"Warning: Color pairing rule '{self.name}' has identical course types")
+            logger.warning("Color pairing rule '%s' has identical course types", self.name)
             return False
         return True
 
@@ -46,7 +49,7 @@ class ColorPairingMenuRule(BaseMenuRule):
         for the configured pair of course types.
         """
         if not hasattr(menu_data, 'columns') or 'item_color' not in menu_data.columns:
-            print(f"Warning: Menu data missing 'item_color' for rule '{self.name}'")
+            logger.warning("Menu data missing 'item_color' for rule '%s'", self.name)
             return
 
         if 'daily_items' not in variables:
@@ -56,7 +59,7 @@ class ColorPairingMenuRule(BaseMenuRule):
         color_map_b = self._group_items_by_color(menu_data, self.course_type_b)
 
         if not color_map_a or not color_map_b:
-            print(f"Warning: No items found for color pairing rule '{self.name}'")
+            logger.warning("No items found for color pairing rule '%s'", self.name)
             return
 
         planning_dates = context.get('planning_dates', [])
@@ -80,7 +83,7 @@ class ColorPairingMenuRule(BaseMenuRule):
                     # Prevent same color across the two courses on the same day
                     model.Add(sum(vars_a) + sum(vars_b) <= 1)
 
-        print(f"Applied color pairing rule: {self.name}")
+        logger.info("Applied color pairing rule: %s", self.name)
 
     def _group_items_by_color(self, menu_data: Any, course_type: str) -> Dict[str, List[str]]:
         """

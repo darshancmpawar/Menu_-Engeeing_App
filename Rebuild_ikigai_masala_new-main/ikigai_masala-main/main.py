@@ -5,16 +5,19 @@ CLI entry point using cell-based solver pipeline.
 
 import argparse
 import datetime as dt
+import logging
 import traceback
 from pathlib import Path
 
-from src.preprocessor import ExcelReader, DataCleanser, ColumnMapper
+from src.preprocessor import ExcelReader, DataCleanser
 from src.preprocessor.pool_builder import PoolBuilder, BASE_SLOT_NAMES, CONST_SLOTS, REPEATABLE_ITEM_BASES
 from src.client import ClientConfigLoader
 from src.history import HistoryManager
 from src.menu_rules import MenuRuleLoader
 from src.solver.menu_solver import MenuSolver, SolverConfig
 from src.solver.solution_formatter import SolutionFormatter
+
+logger = logging.getLogger(__name__)
 
 
 def main():
@@ -45,27 +48,27 @@ Examples:
 
     try:
         # 1. Read and clean ontology
-        print(f"Reading menu data from {args.excel}...")
+        logger.info("Reading menu data from %s...", args.excel)
         reader = ExcelReader(args.excel)
         raw_df = reader.read()
         cleanser = DataCleanser(raw_df)
         df = cleanser.clean()
-        print(f"  {len(df)} items after cleaning")
+        logger.info("  %d items after cleaning", len(df))
 
         # 2. Build pools
-        print("Building slot pools...")
+        logger.info("Building slot pools...")
         pools = PoolBuilder.build_pools(df)
-        print(f"  {len(pools)} pools built")
+        logger.info("  %d pools built", len(pools))
 
         # 3. Load client config
-        print(f"Loading client config for '{args.client}'...")
+        logger.info("Loading client config for '%s'...", args.client)
         loader = ClientConfigLoader(args.clients_config)
         client_cfg = loader.get_client(args.client)
-        print(f"  Menu category: {client_cfg.menu_category}")
-        print(f"  Active slots: {len(client_cfg.active_slots)}")
+        logger.info("  Menu category: %s", client_cfg.menu_category)
+        logger.info("  Active slots: %d", len(client_cfg.active_slots))
 
         # 4. Load menu rules
-        print("Loading menu rules...")
+        logger.info("Loading menu rules...")
         rule_loader = MenuRuleLoader(args.rules_config)
         rules = rule_loader.load_from_file()
 
@@ -76,7 +79,7 @@ Examples:
             start_date = dt.date.today()
 
         # 6. Load history
-        print("Loading history...")
+        logger.info("Loading history...")
         hm = HistoryManager()
         history_long = Path(args.history_long)
         history_weeks = Path(args.history_weeks)
@@ -107,7 +110,7 @@ Examples:
         )
 
         # 8. Solve
-        print(f"\nSolving menu plan for {args.client} ({args.days} days from {start_date})...")
+        logger.info("Solving menu plan for %s (%d days from %s)...", args.client, args.days, start_date)
         solver = MenuSolver(
             pools=pools,
             solver_config=cfg,
@@ -125,20 +128,23 @@ Examples:
 
         if args.output_csv:
             formatter.to_csv(args.output_csv)
-            print(f"\nCSV saved to {args.output_csv}")
+            logger.info("CSV saved to %s", args.output_csv)
 
         if args.output_xlsx:
             formatter.to_excel(args.output_xlsx)
-            print(f"\nExcel saved to {args.output_xlsx}")
+            logger.info("Excel saved to %s", args.output_xlsx)
 
-        print("\nMenu planning completed successfully!")
+        logger.info("Menu planning completed successfully!")
         return 0
 
     except (RuntimeError, ValueError, FileNotFoundError, OSError) as e:
-        print(f"\nError: {e}")
-        traceback.print_exc()
+        logger.error("Error: %s", e, exc_info=True)
         return 1
 
 
 if __name__ == "__main__":
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     exit(main())

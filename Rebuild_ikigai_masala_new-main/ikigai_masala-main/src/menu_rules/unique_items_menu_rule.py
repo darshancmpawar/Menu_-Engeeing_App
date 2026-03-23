@@ -2,9 +2,12 @@
 Unique items menu rule implementation.
 """
 
+import logging
 from typing import Dict, Any, List
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
+
+logger = logging.getLogger(__name__)
 
 
 class UniqueItemsMenuRule(BaseMenuRule):
@@ -28,7 +31,7 @@ class UniqueItemsMenuRule(BaseMenuRule):
         """Validate the unique items rule configuration"""
         valid_scopes = {'session'}
         if self.scope not in valid_scopes:
-            print(f"Warning: Unique items rule '{self.name}' has invalid scope '{self.scope}'")
+            logger.warning("Unique items rule '%s' has invalid scope '%s'", self.name, self.scope)
             return False
         return True
 
@@ -61,4 +64,4 @@ class UniqueItemsMenuRule(BaseMenuRule):
             if item_usage:
                 model.Add(sum(item_usage) <= 1)
 
-        print(f"Applied unique items rule: {self.name}")
+        logger.info("Applied unique items rule: %s", self.name)

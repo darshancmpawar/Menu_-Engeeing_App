@@ -11,6 +11,7 @@ Endpoints:
 
 import datetime as dt
 import logging
+import threading
 import traceback
 from pathlib import Path
 
@@ -35,7 +36,8 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# Singletons loaded on startup
+# Thread-safe lazy singletons
+_init_lock = threading.Lock()
 _client_loader = None
 _pools = None
 _df = None
@@ -45,26 +47,32 @@ _menu_rules = None
 def _get_client_loader():
     global _client_loader
     if _client_loader is None:
-        _client_loader = ClientConfigLoader(CLIENTS_CONFIG_PATH)
+        with _init_lock:
+            if _client_loader is None:
+                _client_loader = ClientConfigLoader(CLIENTS_CONFIG_PATH)
     return _client_loader
 
 
 def _get_menu_data():
     global _pools, _df
     if _pools is None:
-        reader = ExcelReader(DEFAULT_EXCEL_PATH)
-        raw_df = reader.read()
-        cleanser = DataCleanser(raw_df)
-        _df = cleanser.clean()
-        _pools = PoolBuilder.build_pools(_df)
+        with _init_lock:
+            if _pools is None:
+                reader = ExcelReader(DEFAULT_EXCEL_PATH)
+                raw_df = reader.read()
+                cleanser = DataCleanser(raw_df)
+                _df = cleanser.clean()
+                _pools = PoolBuilder.build_pools(_df)
     return _df, _pools
 
 
 def _get_menu_rules():
     global _menu_rules
     if _menu_rules is None:
-        loader = MenuRuleLoader(MENU_RULES_CONFIG_PATH)
-        _menu_rules = loader.load_from_file()
+        with _init_lock:
+            if _menu_rules is None:
+                loader = MenuRuleLoader(MENU_RULES_CONFIG_PATH)
+                _menu_rules = loader.load_from_file()
     return _menu_rules
 
 
@@ -275,4 +283,8 @@ def root():
 
 
 if __name__ == '__main__':
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
     app.run(host=API_HOST, port=API_PORT, debug=DEBUG)

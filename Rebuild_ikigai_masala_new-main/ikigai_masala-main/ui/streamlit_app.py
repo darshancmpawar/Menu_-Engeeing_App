@@ -47,7 +47,7 @@ st.sidebar.header("Planning Parameters")
 
 try:
     clients_list = client.list_clients()
-except Exception:
+except (ConnectionError, OSError, ValueError) as _api_err:
     clients_list = []
     st.sidebar.error("Cannot reach API. Is the Flask server running?")
 
@@ -74,7 +74,7 @@ if st.sidebar.button("Generate Menu Plan", type="primary"):
                 st.session_state.client_name = selected_client
                 st.session_state.changes_log = []
                 st.success(result.get("message", "Plan generated"))
-            except Exception as e:
+            except (ConnectionError, OSError, ValueError, RuntimeError) as e:
                 st.error(f"Generation failed: {e}")
     else:
         st.sidebar.warning("Select a valid client first.")
@@ -154,7 +154,7 @@ if plan and plan_dates:
                     )
                     st.success("Regeneration complete")
                     st.rerun()
-                except Exception as e:
+                except (ConnectionError, OSError, ValueError, RuntimeError) as e:
                     st.error(f"Regeneration failed: {e}")
         else:
             st.warning("Select at least one cell to regenerate.")
@@ -174,7 +174,7 @@ if plan and plan_dates:
                     week_start=plan_dates[0],
                 )
                 st.success("Plan saved to history!")
-            except Exception as e:
+            except (ConnectionError, OSError, ValueError, RuntimeError) as e:
                 st.error(f"Save failed: {e}")
 
     with action_cols[1]:

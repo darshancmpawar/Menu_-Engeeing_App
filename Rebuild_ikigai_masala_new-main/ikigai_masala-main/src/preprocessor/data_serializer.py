@@ -2,6 +2,7 @@
 Data serializer for storing and loading processed menu data - MVP Version
 """
 
+import logging
 import pandas as pd
 import numpy as np
 import pickle
@@ -9,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Dict, Any, Tuple
 from datetime import datetime
+
+logger = logging.getLogger(__name__)
 
 
 class DataSerializer:
@@ -66,7 +69,7 @@ class DataSerializer:
                 'timestamp': timestamp
             }, f, indent=2)
         
-        print(f"  Saved to: {pickle_path.name}")
+        logger.info("Saved to: %s", pickle_path.name)
         
         return {
             'pickle_path': str(pickle_path),
@@ -100,6 +103,6 @@ class DataSerializer:
         with open(metadata_path, 'r') as f:
             metadata = json.load(f)
         
-        print(f"Loaded dataset: {len(df)} items from {pickle_path}")
+        logger.info("Loaded dataset: %d items from %s", len(df), pickle_path)
         return df, metadata
     

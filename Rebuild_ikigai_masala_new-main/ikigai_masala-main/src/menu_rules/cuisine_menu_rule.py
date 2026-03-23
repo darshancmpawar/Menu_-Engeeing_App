@@ -2,9 +2,12 @@
 Cuisine-specific menu rule implementation - MVP Version
 """
 
+import logging
 from typing import Dict, Any, List
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
+
+logger = logging.getLogger(__name__)
 
 
 class CuisineMenuRule(BaseMenuRule):
@@ -34,13 +37,13 @@ class CuisineMenuRule(BaseMenuRule):
     def validate_config(self) -> bool:
         """Validate the cuisine menu rule configuration"""
         if not self.cuisine_family:
-            print(f"Warning: Cuisine rule '{self.name}' has no cuisine_family")
+            logger.warning("Cuisine rule '%s' has no cuisine_family", self.name)
             return False
         
         valid_days = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
         for day in self.days_of_week:
             if day.lower() not in valid_days:
-                print(f"Error: Invalid day '{day}' in rule '{self.name}'")
+                logger.warning("Invalid day '%s' in rule '%s'", day, self.name)
                 return False
         
         return True
@@ -64,7 +67,7 @@ class CuisineMenuRule(BaseMenuRule):
         cuisine_items = self._get_cuisine_items(menu_data)
         
         if not cuisine_items:
-            print(f"Warning: No items found for cuisine '{self.cuisine_family}'")
+            logger.warning("No items found for cuisine '%s'", self.cuisine_family)
             return
         
         # Get meal structure from context (always provided)
@@ -107,8 +110,7 @@ class CuisineMenuRule(BaseMenuRule):
                 if not cuisine_items_for_course:
                     # No items available for this course type - RELAX the constraint
                     relaxed_courses.append(course_type)
-                    print(f"⚠️  No {self.cuisine_family} items available for '{course_type}' on {day_name}")
-                    print(f"   → Relaxing constraint: Any cuisine allowed for '{course_type}' course")
+                    logger.info("No %s items available for '%s' on %s — relaxing constraint", self.cuisine_family, course_type, day_name)
                     continue
                 
                 # Get variables for cuisine items of this course type on this day
@@ -123,12 +125,11 @@ class CuisineMenuRule(BaseMenuRule):
                     constraints_applied += 1
             
             if relaxed_courses:
-                print(f"✓  Applied {self.cuisine_family} constraint to {constraints_applied} courses on {day_name}")
-                print(f"   Relaxed courses: {', '.join(relaxed_courses)}")
+                logger.info("Applied %s constraint to %d courses on %s (relaxed: %s)", self.cuisine_family, constraints_applied, day_name, ', '.join(relaxed_courses))
             else:
-                print(f"✓  Applied {self.cuisine_family} constraint to all {constraints_applied} courses on {day_name}")
+                logger.info("Applied %s constraint to all %d courses on %s", self.cuisine_family, constraints_applied, day_name)
         
-        print(f"Applied cuisine rule: {self.name}")
+        logger.info("Applied cuisine rule: %s", self.name)
     
     def _get_cuisine_items(self, menu_data: Any) -> List[str]:
         """

@@ -12,16 +12,13 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-SLOT_SUFFIX_SEP = '__'
+from src.preprocessor.pool_builder import (
+    BASE_SLOT_NAMES as BASE_SLOTS,
+    CONST_SLOTS,
+    SLOT_SUFFIX_SEP,
+)
 
-BASE_SLOTS: List[str] = [
-    'welcome_drink', 'soup', 'salad', 'starter', 'bread', 'rice',
-    'healthy_rice', 'dal', 'sambar', 'rasam', 'veg_gravy', 'veg_dry',
-    'nonveg_main', 'curd_side', 'dessert',
-]
-
-CONST_SLOTS: List[str] = ['white_rice', 'papad', 'pickle', 'chutney']
-ALL_SLOTS: List[str] = BASE_SLOTS + CONST_SLOTS
+ALL_SLOTS: List[str] = list(BASE_SLOTS) + list(CONST_SLOTS)
 
 
 @dataclass
