@@ -5,32 +5,12 @@ Handles slot-based output format with color suffixes and constant items.
 """
 
 import datetime as dt
-import re
 from typing import Dict, Any, List, Optional
 
 import pandas as pd
 
+from ._helpers import weekday_type as _weekday_type, theme_label as _theme_label, strip_color_suffix as _strip_color_suffix
 from ..preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, _base_slot, _slot_num
-
-
-def _strip_color_suffix(s: str) -> str:
-    return re.sub(r'\([A-Z]\)\s*$', '', (s or '').strip()).strip()
-
-
-def _weekday_type(d: dt.date) -> str:
-    wd = d.strftime('%A').lower()
-    return {
-        'monday': 'mix', 'tuesday': 'chinese', 'wednesday': 'biryani',
-        'thursday': 'south', 'friday': 'north',
-    }.get(wd, 'holiday' if wd in ('saturday', 'sunday') else 'normal')
-
-
-def _theme_label(day_type: str) -> str:
-    return {
-        'mix': 'Mix of South + North', 'chinese': 'Chinese',
-        'biryani': 'Biryani', 'south': 'South Indian',
-        'north': 'North Indian', 'holiday': 'Holiday', 'normal': 'Normal',
-    }.get(day_type, day_type.capitalize())
 
 
 def _display_slot(slot_id: str) -> str:

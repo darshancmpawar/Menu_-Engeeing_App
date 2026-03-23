@@ -9,13 +9,13 @@ from __future__ import annotations
 
 import datetime as dt
 import random
-import re
 from dataclasses import dataclass, field
 from typing import Dict, List, Any, Optional, Set, Tuple
 
 import pandas as pd
 from ortools.sat.python import cp_model
 
+from ._helpers import weekday_type as _weekday_type, theme_label as _theme_label, strip_color_suffix as _strip_color_suffix
 from ..menu_rules.base_menu_rule import BaseMenuRule
 from ..preprocessor.pool_builder import (
     BASE_SLOT_NAMES, CONST_SLOTS, CONSTANT_ITEMS, EXEMPT_FROM_CUISINE,
@@ -95,22 +95,6 @@ class _Cell:
 # Helpers
 # ---------------------------------------------------------------------------
 
-def _weekday_type(d: dt.date) -> str:
-    wd = d.strftime('%A').lower()
-    return {
-        'monday': 'mix', 'tuesday': 'chinese', 'wednesday': 'biryani',
-        'thursday': 'south', 'friday': 'north',
-    }.get(wd, 'holiday' if wd in ('saturday', 'sunday') else 'normal')
-
-
-def _theme_label(day_type: str) -> str:
-    return {
-        'mix': 'Mix of South + North', 'chinese': 'Chinese',
-        'biryani': 'Biryani', 'south': 'South Indian',
-        'north': 'North Indian', 'holiday': 'Holiday', 'normal': 'Normal',
-    }.get(day_type, day_type.capitalize())
-
-
 def _color_initial(x) -> str:
     c = _norm_color(x)
     if c == 'unknown':
@@ -123,10 +107,6 @@ def _fmt_item_with_color(row: pd.Series, color_col: str) -> str:
     item = str(row.get('item', ''))
     ini = _color_initial(row.get(color_col, 'unknown'))
     return f'{item}({ini})' if ini else item
-
-
-def _strip_color_suffix(s: str) -> str:
-    return re.sub(r'\([A-Z]\)\s*$', '', (s or '').strip()).strip()
 
 
 def _min_distinct_for_day(cfg: SolverConfig, day_type: str) -> int:

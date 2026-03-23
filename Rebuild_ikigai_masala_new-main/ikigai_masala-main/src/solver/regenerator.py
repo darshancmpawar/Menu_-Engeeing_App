@@ -12,7 +12,9 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import pandas as pd
 
-from .menu_solver import MenuSolver, SolverConfig, _norm_str, _norm_color, _strip_color_suffix
+from ._helpers import strip_color_suffix as _strip_color_suffix
+from .menu_solver import MenuSolver, SolverConfig
+from ..preprocessor.column_mapper import _norm_str, _norm_color
 
 
 def similarity_score(cand: pd.Series, orig: pd.Series) -> int:
