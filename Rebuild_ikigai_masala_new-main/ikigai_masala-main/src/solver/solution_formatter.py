@@ -1,131 +1,141 @@
 """
-Solution formatter for presenting menu plans - MVP Version
+Solution formatter for presenting menu plans.
+
+Handles slot-based output format with color suffixes and constant items.
 """
 
+import datetime as dt
+import re
+from typing import Dict, Any, List, Optional
+
 import pandas as pd
-from typing import Dict, Any
+
+from ..preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, _base_slot, _slot_num
+
+
+def _strip_color_suffix(s: str) -> str:
+    return re.sub(r'\([A-Z]\)\s*$', '', (s or '').strip()).strip()
+
+
+def _weekday_type(d: dt.date) -> str:
+    wd = d.strftime('%A').lower()
+    return {
+        'monday': 'mix', 'tuesday': 'chinese', 'wednesday': 'biryani',
+        'thursday': 'south', 'friday': 'north',
+    }.get(wd, 'holiday' if wd in ('saturday', 'sunday') else 'normal')
+
+
+def _theme_label(day_type: str) -> str:
+    return {
+        'mix': 'Mix of South + North', 'chinese': 'Chinese',
+        'biryani': 'Biryani', 'south': 'South Indian',
+        'north': 'North Indian', 'holiday': 'Holiday', 'normal': 'Normal',
+    }.get(day_type, day_type.capitalize())
+
+
+def _display_slot(slot_id: str) -> str:
+    base = _base_slot(slot_id)
+    num = _slot_num(slot_id)
+    base_disp = DISPLAY_SLOT_NAME.get(base, base.replace('_', ' ').title())
+    return base_disp if num is None else f'{base_disp} {num}'
 
 
 class SolutionFormatter:
     """
-    Formats menu planning solutions for various output formats.
-    Simplified MVP version focusing on clean CSV output.
+    Formats cell-based menu planning solutions for output.
+
+    Expects week_plan = {date: {slot_id: item_string_with_color}}
     """
-    
-    def __init__(self, solution: Dict[str, Any]):
-        """
-        Initialize the formatter with a solution.
-        
-        Args:
-            solution: Solution dictionary from MenuSolver
-        """
-        self.solution = solution
-        
+
+    def __init__(self, week_plan: Dict[dt.date, Dict[str, str]], dates: List[dt.date]):
+        self.week_plan = week_plan
+        self.dates = dates
+
     def print_summary(self) -> None:
-        """
-        Print a brief summary of the solution to console.
-        """
         print("\n" + "=" * 60)
         print("MENU PLAN SOLUTION")
         print("=" * 60)
-        
-        stats = self.solution.get('statistics', {})
-        print(f"\nStatus: {stats.get('status', 'UNKNOWN')}")
-        print(f"Solve Time: {stats.get('solve_time', 0):.2f}s")
-        
-        menu_plan = self.solution.get('menu_plan', {})
-        print(f"\n📅 Generated menu for {len(menu_plan)} days")
+        print(f"\nGenerated menu for {len(self.dates)} days")
+        for d in self.dates:
+            day_type = _weekday_type(d)
+            items = self.week_plan.get(d, {})
+            slot_count = len([s for s in items if s not in CONST_SLOTS])
+            print(f"  {d.isoformat()} ({_theme_label(day_type)}): {slot_count} items")
         print("=" * 60)
-    
-    def to_csv(self, output_path: str, meal_structure=None) -> None:
-        """
-        Export solution to CSV file in pivot format (courses as rows, dates as columns).
-        Shows only the selected items per course as defined in meal composition.
-        
-        Args:
-            output_path: Path to save the CSV file
-            meal_structure: MealStructure object to get course order and requirements
-        """
-        menu_plan = self.solution.get('menu_plan', {})
-        
-        # Get all dates sorted
-        dates = sorted(menu_plan.keys())
-        
-        # Determine course types from meal structure
-        if meal_structure:
-            # Use the order from meal composition (simplified: 1 item per course)
-            course_info = {}
-            for req in meal_structure.course_requirements:
-                course_info[req.course_type] = {
-                    'order': len(course_info),
-                    'max_items': 1
-                }
-            course_types = [req.course_type for req in meal_structure.course_requirements]
-        else:
-            # Get unique course types from the solution
-            course_types = set()
-            for items in menu_plan.values():
-                for item in items:
-                    course_types.add(item.get('course_type', ''))
-            course_types = sorted(course_types)
-            course_info = {ct: {'order': i, 'max_items': 1} for i, ct in enumerate(course_types)}
-        
-        # Build the pivot data
+
+    def to_csv(self, output_path: str) -> None:
+        """Export to CSV: rows=slots, columns=dates with theme headers."""
+        if not self.dates:
+            return
+
+        # Determine row slot order from first day
+        slot_order = []
+        for d in self.dates:
+            day_map = self.week_plan.get(d, {})
+            if day_map:
+                slot_order = list(day_map.keys())
+                break
+
+        # Column headers: Theme-Day(date)
+        cols = [
+            f"{_theme_label(_weekday_type(d))}-{d.strftime('%A')}({d.isoformat()})"
+            for d in self.dates
+        ]
+
         rows = []
-        for course_type in course_types:
-            row = {'Course': course_type.replace('_', ' ').title()}
-            max_items = course_info.get(course_type, {}).get('max_items', 1)
-            
-            for date in dates:
-                items = menu_plan[date]
-                # Find items matching this course type
-                matching_items = [
-                    item for item in items 
-                    if item.get('course_type', '') == course_type
-                ]
-                
-                # Take only the required number of items (as per meal composition)
-                if matching_items:
-                    item_names = [
-                        item.get('item_name', '').replace('_', ' ').title() 
-                        for item in matching_items[:max_items]
-                    ]
-                    row[date] = ' | '.join(item_names) if len(item_names) > 1 else item_names[0] if item_names else ''
-                else:
-                    row[date] = ''
-            
+        for slot_id in slot_order:
+            row = {'Slot': _display_slot(slot_id)}
+            for d, col_name in zip(self.dates, cols):
+                row[col_name] = self.week_plan.get(d, {}).get(slot_id, '')
             rows.append(row)
-        
+
         df = pd.DataFrame(rows)
         df.to_csv(output_path, index=False)
-        
-        print(f"\n{'=' * 60}")
-        print(f"📊 Exported menu plan to {output_path}")
-        print(f"   Format: Courses (rows) × Dates (columns)")
-        print(f"   Courses: {len(course_types)}")
-        print(f"   Days: {len(dates)}")
-        print(f"{'=' * 60}")
-    
+        print(f"Exported menu plan to {output_path}")
+
     def to_excel(self, output_path: str) -> None:
-        """
-        Export detailed solution to Excel file (all items).
-        
-        Args:
-            output_path: Path to save the Excel file
-        """
+        """Export to Excel: same format as CSV."""
+        if not self.dates:
+            return
+
+        slot_order = []
+        for d in self.dates:
+            day_map = self.week_plan.get(d, {})
+            if day_map:
+                slot_order = list(day_map.keys())
+                break
+
+        cols = [
+            f"{_theme_label(_weekday_type(d))}-{d.strftime('%A')}({d.isoformat()})"
+            for d in self.dates
+        ]
+
         rows = []
-        
-        for date, items in self.solution.get('menu_plan', {}).items():
-            for item in items:
-                rows.append({
-                    'date': date,
-                    'item_id': item.get('item_id', ''),
-                    'item_name': item.get('item_name', ''),
-                    'course_type': item.get('course_type', ''),
-                    'cuisine_family': item.get('cuisine_family', '')
-                })
-        
+        for slot_id in slot_order:
+            row = {'Slot': _display_slot(slot_id)}
+            for d, col_name in zip(self.dates, cols):
+                row[col_name] = self.week_plan.get(d, {}).get(slot_id, '')
+            rows.append(row)
+
         df = pd.DataFrame(rows)
         df.to_excel(output_path, index=False)
-        
-        print(f"   Detailed data: {output_path}")
+        print(f"Exported menu plan to {output_path}")
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert to JSON-serializable dict."""
+        result = {}
+        for d in self.dates:
+            day_key = d.isoformat()
+            day_type = _weekday_type(d)
+            result[day_key] = {
+                'theme': _theme_label(day_type),
+                'day_type': day_type,
+                'items': {},
+            }
+            for slot_id, item_str in self.week_plan.get(d, {}).items():
+                result[day_key]['items'][slot_id] = {
+                    'display_name': _display_slot(slot_id),
+                    'item': item_str,
+                    'item_base': _strip_color_suffix(item_str),
+                }
+        return result

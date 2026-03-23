@@ -1,72 +1,74 @@
 """
-Excel file reader for menu data - MVP Version
+Excel file reader for menu data.
+
+Reads Ontology.xlsx (or any menu-items Excel) and applies ColumnMapper
+to resolve aliases and normalise the schema before returning a DataFrame.
 """
 
 import pandas as pd
 from pathlib import Path
 from typing import Dict, Any
 
+from .column_mapper import ColumnMapper
+
 
 class ExcelReader:
     """
-    Reads menu data from Excel files.
-    
-    Expected columns (MVP):
-    - item_id: Unique identifier for menu item
-    - item_name: Name of the dish
-    - course_type: Type of course (starter, main, rice, dessert, etc.)
-    - cuisine_family: Cuisine category (Italian, Chinese, Indian, etc.)
-    - item_color: Color/category tag for the item
+    Reads menu data from Excel files and validates/normalizes the schema
+    via ColumnMapper.
     """
-    
-    def __init__(self, file_path: str):
-        """
-        Initialize the Excel reader.
-        
-        Args:
-            file_path: Path to the Excel file
-        """
+
+    def __init__(self, file_path: str, sheet_name: str = 0):
         self.file_path = Path(file_path)
+        self.sheet_name = sheet_name
         self.data = None
-        
+        self._mapper = ColumnMapper()
+
     def read(self) -> pd.DataFrame:
         """
-        Read the Excel file and return as DataFrame.
-        
+        Read the Excel file, apply column mapping & normalization.
+
         Returns:
-            pandas DataFrame containing menu data
+            pandas DataFrame with canonical column names and normalized values.
         """
         if not self.file_path.exists():
             raise FileNotFoundError(f"Excel file not found: {self.file_path}")
-        
-        self.data = pd.read_excel(self.file_path)
-        
+
+        raw = pd.read_excel(self.file_path, sheet_name=self.sheet_name)
+
+        # Detect aliases and validate
+        self._mapper.detect(raw)
+        validation = self._mapper.validate()
+        if not validation['valid']:
+            raise ValueError(validation['error'])
+
+        # Apply renaming, normalization, flag handling, key_eff computation
+        self.data = self._mapper.apply(raw)
+
         print(f"Read {len(self.data)} menu items from {self.file_path}")
         return self.data
-    
+
     def validate_schema(self) -> Dict[str, Any]:
         """
-        Validate that the Excel file has required columns.
-        
+        Validate that the loaded data has the required columns.
+
         Returns:
-            Dictionary with validation results
+            Dictionary with validation results.
         """
-        required_columns = ['item_id', 'item_name', 'course_type', 'cuisine_family', 'item_color']
-        
         if self.data is None:
             return {'valid': False, 'error': 'No data loaded'}
-        
-        missing_columns = [col for col in required_columns if col not in self.data.columns]
-        
-        if missing_columns:
+
+        required = ['item', 'course_type']
+        missing = [c for c in required if c not in self.data.columns]
+        if missing:
             return {
                 'valid': False,
-                'missing_columns': missing_columns,
-                'error': f"Missing required columns: {missing_columns}"
+                'missing_columns': missing,
+                'error': f"Missing required columns: {missing}",
             }
-        
+
         return {
             'valid': True,
             'columns': list(self.data.columns),
-            'row_count': len(self.data)
+            'row_count': len(self.data),
         }

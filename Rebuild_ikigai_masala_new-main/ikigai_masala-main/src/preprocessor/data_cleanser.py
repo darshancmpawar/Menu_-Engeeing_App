@@ -1,5 +1,8 @@
 """
-Data cleanser for menu data - MVP Version
+Data cleanser for menu data.
+
+Handles deduplication, missing values, and text standardization
+for the full Ontology schema (including flag columns).
 """
 
 import pandas as pd
@@ -8,55 +11,48 @@ from typing import Dict, Any
 
 class DataCleanser:
     """
-    Basic data cleaning for menu data.
-    MVP version with minimal essential checks only.
+    Cleaning layer that runs *after* ColumnMapper has normalized the schema.
+    Handles deduplication, empty-row removal, and final validation.
     """
-    
+
     def __init__(self, data: pd.DataFrame):
-        """
-        Initialize the data cleanser.
-        
-        Args:
-            data: Raw DataFrame from Excel
-        """
         self.raw_data = data.copy()
         self.cleaned_data = None
-        
+
     def clean(self) -> pd.DataFrame:
         """
-        Perform basic cleaning operations on the data.
-        
+        Perform cleaning operations on the data.
+
         Returns:
-            Cleaned DataFrame
+            Cleaned DataFrame.
         """
         df = self.raw_data.copy()
-        
-        # 1. Remove duplicates based on item_id
+
+        # 1. Remove duplicates based on item_id (or item if item_id absent)
+        dedup_col = 'item_id' if 'item_id' in df.columns else 'item'
         initial_count = len(df)
-        df = df.drop_duplicates(subset=['item_id'], keep='first')
-        duplicates_removed = initial_count - len(df)
-        if duplicates_removed > 0:
-            print(f"  Removed {duplicates_removed} duplicate items")
-        
-        # 2. Handle missing values (fill with empty string)
-        df['item_name'] = df['item_name'].fillna('')
-        df['course_type'] = df['course_type'].fillna('')
-        df['cuisine_family'] = df['cuisine_family'].fillna('')
-        if 'item_color' not in df.columns:
-            df['item_color'] = ''
-        df['item_color'] = df['item_color'].fillna('')
-        
-        # 3. Standardize text fields (lowercase and trim)
-        df['item_id'] = df['item_id'].astype(str).str.strip()
-        df['item_name'] = df['item_name'].astype(str).str.strip().str.lower()
-        df['course_type'] = df['course_type'].astype(str).str.strip().str.lower()
-        df['cuisine_family'] = df['cuisine_family'].astype(str).str.strip().str.lower()
-        df['item_color'] = df['item_color'].astype(str).str.strip().str.lower()
-        
-        # 4. Remove any rows with empty item_id or item_name
-        df = df[df['item_id'].str.len() > 0]
-        df = df[df['item_name'].str.len() > 0]
-        
+        df = df.drop_duplicates(subset=[dedup_col], keep='first')
+        removed = initial_count - len(df)
+        if removed > 0:
+            print(f"  Removed {removed} duplicate items")
+
+        # 2. Fill missing text fields
+        for col in ('item', 'item_name', 'course_type', 'cuisine_family', 'item_color',
+                     'key_ingredient', 'sub_category'):
+            if col in df.columns:
+                df[col] = df[col].fillna('')
+
+        # 3. Remove rows with empty item or course_type
+        if 'item' in df.columns:
+            df = df[df['item'].astype(str).str.strip().str.len() > 0]
+        if 'course_type' in df.columns:
+            df = df[df['course_type'].astype(str).str.strip().str.len() > 0]
+
+        # 4. Ensure all flag columns are int (fill NaN with 0)
+        flag_cols = [c for c in df.columns if c.startswith('is_')]
+        for col in flag_cols:
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0).astype(int)
+
         self.cleaned_data = df
         print(f"  Cleaned data: {len(df)} items ready")
         return df

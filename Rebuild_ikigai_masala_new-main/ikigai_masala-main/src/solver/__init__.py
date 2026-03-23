@@ -1,8 +1,6 @@
-"""
-Menu planning solver module using Google OR-Tools CP-SAT
-"""
+"""Solver module."""
 
-from .menu_solver import MenuSolver
+from .menu_solver import MenuSolver, SolverConfig
 from .solution_formatter import SolutionFormatter
 
-__all__ = ['MenuSolver', 'SolutionFormatter']
+__all__ = ['MenuSolver', 'SolverConfig', 'SolutionFormatter']

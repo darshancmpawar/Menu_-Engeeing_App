@@ -1,14 +1,49 @@
 {
-  "client_id": "indian_lunch_provider",
-  "description": "Menu rules for Indian lunch menu planning",
+  "description": "Complete menu rules for Indian lunch menu planning",
   "rules": [
     {
-      "name": "chinese_monday",
-      "type": "cuisine",
-      "enabled": true,
-      "cuisine_family": "chinese",
-      "days_of_week": ["monday"],
-      "description": "Chinese cuisine on Monday with smart fallback"
+      "name": "unique_items_session",
+      "type": "unique_items",
+      "scope": "session"
+    },
+    {
+      "name": "monday_mix",
+      "type": "theme_day"
+    },
+    {
+      "name": "deep_fried_coupling",
+      "type": "coupling"
+    },
+    {
+      "name": "curd_raita_logic",
+      "type": "curd_side",
+      "pulao_subcats": ["south_veg_pulao", "north_simple_veg_pulao", "north_rich_pulao", "millet_pulao", "mixed_grain_pulao"]
+    },
+    {
+      "name": "premium_limits",
+      "type": "premium",
+      "max_per_day": 1,
+      "min_per_horizon": 1,
+      "max_per_horizon": 2
+    },
+    {
+      "name": "welcome_drink_no_repeat_color",
+      "type": "welcome_drink_color"
+    },
+    {
+      "name": "no_repeat_weeks",
+      "type": "week_signature_cooldown",
+      "cooldown_days": 30
+    },
+    {
+      "name": "prefer_theme_starters",
+      "type": "theme_starter_preference",
+      "bonus_weight": 1000000
+    },
+    {
+      "name": "penalize_non_theme_fallback",
+      "type": "theme_fallback_penalty",
+      "penalty": 2000000
     }
   ]
 }
