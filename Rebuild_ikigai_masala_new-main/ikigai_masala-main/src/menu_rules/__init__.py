@@ -15,6 +15,10 @@ from .welcome_drink_color_menu_rule import WelcomeDrinkColorMenuRule
 from .week_signature_cooldown_menu_rule import WeekSignatureCooldownMenuRule
 from .theme_starter_preference_rule import ThemeStarterPreferenceRule
 from .theme_fallback_penalty_rule import ThemeFallbackPenaltyRule
+from .item_cooldown_menu_rule import ItemCooldownMenuRule
+from .ricebread_gap_menu_rule import RiceBreadGapMenuRule
+from .theme_slot_filter_rule import ThemeSlotFilterRule
+from .nonveg_dry_preference_rule import NonvegDryPreferenceRule
 from .menu_rule_loader import MenuRuleLoader
 
 __all__ = [
@@ -23,5 +27,6 @@ __all__ = [
     'UniqueItemsMenuRule', 'ThemeDayMenuRule', 'CouplingMenuRule',
     'CurdSideMenuRule', 'PremiumMenuRule', 'WelcomeDrinkColorMenuRule',
     'WeekSignatureCooldownMenuRule', 'ThemeStarterPreferenceRule',
-    'ThemeFallbackPenaltyRule',
+    'ThemeFallbackPenaltyRule', 'ItemCooldownMenuRule',
+    'RiceBreadGapMenuRule', 'ThemeSlotFilterRule', 'NonvegDryPreferenceRule',
 ]

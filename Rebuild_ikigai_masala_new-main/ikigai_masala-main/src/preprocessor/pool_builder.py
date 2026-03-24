@@ -60,10 +60,6 @@ DISPLAY_SLOT_NAME: Dict[str, str] = {
     'curd_side': 'Curd Side',
 }
 
-DEEPFRIED_STARTER_HINT_WORDS = (
-    'fried', 'fry', 'pakoda', 'pakora', 'vada', 'bonda', 'bhaji', 'bajji', 'cutlet',
-)
-
 # course_type -> slot mapping for simple 1:1 cases
 _SIMPLE_MAPPING: Dict[str, Set[str]] = {
     'welcome_drink': {'welcome_drink', 'infused_water'},

@@ -22,6 +22,10 @@ from .welcome_drink_color_menu_rule import WelcomeDrinkColorMenuRule
 from .week_signature_cooldown_menu_rule import WeekSignatureCooldownMenuRule
 from .theme_starter_preference_rule import ThemeStarterPreferenceRule
 from .theme_fallback_penalty_rule import ThemeFallbackPenaltyRule
+from .item_cooldown_menu_rule import ItemCooldownMenuRule
+from .ricebread_gap_menu_rule import RiceBreadGapMenuRule
+from .theme_slot_filter_rule import ThemeSlotFilterRule
+from .nonveg_dry_preference_rule import NonvegDryPreferenceRule
 
 
 class MenuRuleLoader:
@@ -40,6 +44,10 @@ class MenuRuleLoader:
         'week_signature_cooldown': WeekSignatureCooldownMenuRule,
         'theme_starter_preference': ThemeStarterPreferenceRule,
         'theme_fallback_penalty': ThemeFallbackPenaltyRule,
+        'item_cooldown': ItemCooldownMenuRule,
+        'ricebread_gap': RiceBreadGapMenuRule,
+        'theme_slot_filter': ThemeSlotFilterRule,
+        'nonveg_dry_preference': NonvegDryPreferenceRule,
     }
 
     def __init__(self, config_path: Optional[str] = None):

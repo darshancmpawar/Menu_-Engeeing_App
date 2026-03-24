@@ -5,6 +5,9 @@ Tests validate_config, rule_type, config parsing, and basic properties.
 CP-SAT constraint logic is tested indirectly via the integration test.
 """
 
+import datetime as dt
+
+import pandas as pd
 import pytest
 from src.menu_rules.coupling_menu_rule import CouplingMenuRule
 from src.menu_rules.curd_side_menu_rule import CurdSideMenuRule
@@ -18,6 +21,10 @@ from src.menu_rules.unique_items_menu_rule import UniqueItemsMenuRule
 from src.menu_rules.color_pairing_menu_rule import ColorPairingMenuRule
 from src.menu_rules.color_variety_menu_rule import ColorVarietyMenuRule
 from src.menu_rules.cuisine_menu_rule import CuisineMenuRule
+from src.menu_rules.item_cooldown_menu_rule import ItemCooldownMenuRule
+from src.menu_rules.ricebread_gap_menu_rule import RiceBreadGapMenuRule
+from src.menu_rules.theme_slot_filter_rule import ThemeSlotFilterRule
+from src.menu_rules.nonveg_dry_preference_rule import NonvegDryPreferenceRule
 from src.menu_rules.base_menu_rule import MenuRuleType
 
 
@@ -256,3 +263,206 @@ class TestCuisineMenuRule:
                                  "cuisine_family": "italian",
                                  "days_of_week": ["monday"]})
         assert rule.rule_type == MenuRuleType.CUISINE
+
+
+# --- ItemCooldownMenuRule ---
+
+class TestItemCooldownMenuRule:
+    def test_validate(self):
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown", "cooldown_days": 20})
+        assert rule.validate_config()
+
+    def test_cooldown_default(self):
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown"})
+        assert rule.cooldown_days == 20
+
+    def test_rule_type(self):
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown"})
+        assert rule.rule_type == MenuRuleType.ITEM_COOLDOWN
+
+    def test_pre_filter_removes_banned(self):
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown"})
+        pool = pd.DataFrame({'item': ['paneer_tikka', 'dal_makhani', 'chole']})
+        d = dt.date(2026, 3, 24)
+        ctx = {'banned_by_date': {d: {'paneer_tikka', 'chole'}}}
+        filtered = rule.pre_filter_pool(pool, d, 'starter', 'south', ctx)
+        assert list(filtered['item']) == ['dal_makhani']
+
+    def test_pre_filter_no_bans_returns_all(self):
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown"})
+        pool = pd.DataFrame({'item': ['paneer_tikka', 'dal_makhani']})
+        d = dt.date(2026, 3, 24)
+        filtered = rule.pre_filter_pool(pool, d, 'starter', 'south', {})
+        assert len(filtered) == 2
+
+    def test_apply_is_noop(self):
+        from ortools.sat.python import cp_model
+        model = cp_model.CpModel()
+        rule = ItemCooldownMenuRule({"name": "cd", "type": "item_cooldown"})
+        rule.apply(model, {}, None, {})
+
+
+# --- RiceBreadGapMenuRule ---
+
+class TestRiceBreadGapMenuRule:
+    def test_validate(self):
+        rule = RiceBreadGapMenuRule({"name": "rb", "type": "ricebread_gap", "gap_days": 10})
+        assert rule.validate_config()
+
+    def test_gap_default(self):
+        rule = RiceBreadGapMenuRule({"name": "rb", "type": "ricebread_gap"})
+        assert rule.gap_days == 10
+
+    def test_rule_type(self):
+        rule = RiceBreadGapMenuRule({"name": "rb", "type": "ricebread_gap"})
+        assert rule.rule_type == MenuRuleType.RICEBREAD_GAP
+
+    def test_pre_filter_removes_ricebread_when_banned(self):
+        rule = RiceBreadGapMenuRule({"name": "rb", "type": "ricebread_gap"})
+        pool = pd.DataFrame({
+            'item': ['naan', 'rice_roti', 'chapati'],
+            'is_rice_bread': [0, 1, 0],
+        })
+        d = dt.date(2026, 3, 24)
+        ctx = {'ricebread_ban_day': {d: True}}
+        filtered = rule.pre_filter_pool(pool, d, 'bread', 'south', ctx)
+        assert list(filtered['item']) == ['naan', 'chapati']
+
+    def test_pre_filter_ignores_non_bread(self):
+        rule = RiceBreadGapMenuRule({"name": "rb", "type": "ricebread_gap"})
+        pool = pd.DataFrame({'item': ['x'], 'is_rice_bread': [1]})
+        d = dt.date(2026, 3, 24)
+        ctx = {'ricebread_ban_day': {d: True}}
+        filtered = rule.pre_filter_pool(pool, d, 'rice', 'south', ctx)
+        assert len(filtered) == 1
+
+
+# --- ThemeSlotFilterRule ---
+
+class TestThemeSlotFilterRule:
+    def test_validate(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        assert rule.validate_config()
+
+    def test_rule_type(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        assert rule.rule_type == MenuRuleType.THEME_SLOT_FILTER
+
+    def test_chinese_filters_rice(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['veg_fried_rice', 'jeera_rice', 'schezwan_rice'],
+            'is_chinese_fried_rice': [1, 0, 1],
+        })
+        d = dt.date(2026, 3, 24)
+        cfg = type('Cfg', (), {'cuisine_col': 'cuisine_family',
+                                'cuisine_south_value': 'south_indian',
+                                'cuisine_north_value': 'north_indian'})()
+        filtered = rule.pre_filter_pool(pool, d, 'rice', 'chinese', {'cfg': cfg})
+        assert set(filtered['item']) == {'veg_fried_rice', 'schezwan_rice'}
+
+    def test_biryani_filters_rice(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['veg_biryani', 'jeera_rice'],
+            'is_mixedveg_biryani': [1, 0],
+        })
+        d = dt.date(2026, 3, 24)
+        filtered = rule.pre_filter_pool(pool, d, 'rice', 'biryani', {'cfg': None})
+        assert list(filtered['item']) == ['veg_biryani']
+
+    def test_south_filters_cuisine(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['sambar_rice', 'jeera_rice'],
+            'cuisine_family': ['south_indian', 'north_indian'],
+        })
+        d = dt.date(2026, 3, 24)
+        cfg = type('Cfg', (), {'cuisine_col': 'cuisine_family',
+                                'cuisine_south_value': 'south_indian',
+                                'cuisine_north_value': 'north_indian'})()
+        filtered = rule.pre_filter_pool(pool, d, 'rice', 'south', {'cfg': cfg})
+        assert list(filtered['item']) == ['sambar_rice']
+
+    def test_exempt_slot_not_filtered(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['toor_dal', 'moong_dal'],
+            'cuisine_family': ['south_indian', 'north_indian'],
+        })
+        d = dt.date(2026, 3, 24)
+        cfg = type('Cfg', (), {'cuisine_col': 'cuisine_family',
+                                'cuisine_south_value': 'south_indian',
+                                'cuisine_north_value': 'north_indian'})()
+        # 'dal' is exempt
+        filtered = rule.pre_filter_pool(pool, d, 'dal', 'south', {'cfg': cfg})
+        assert len(filtered) == 2
+
+    def test_mix_day_no_filtering(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['a', 'b'],
+            'cuisine_family': ['south_indian', 'north_indian'],
+        })
+        d = dt.date(2026, 3, 24)
+        filtered = rule.pre_filter_pool(pool, d, 'rice', 'mix', {'cfg': None})
+        assert len(filtered) == 2
+
+    def test_bread_south_lock(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['dosa', 'naan', 'paratha'],
+            'cuisine_family': ['south_indian', 'north_indian', 'north_indian'],
+        })
+        d = dt.date(2026, 3, 24)
+        cfg = type('Cfg', (), {'cuisine_col': 'cuisine_family',
+                                'cuisine_south_value': 'south_indian',
+                                'cuisine_north_value': 'north_indian'})()
+        # South day: bread should be south only
+        filtered = rule.pre_filter_pool(pool, d, 'bread', 'south', {'cfg': cfg})
+        assert list(filtered['item']) == ['dosa']
+
+        # North day: bread should be non-south
+        filtered = rule.pre_filter_pool(pool, d, 'bread', 'north', {'cfg': cfg})
+        assert set(filtered['item']) == {'naan', 'paratha'}
+
+
+# --- NonvegDryPreferenceRule ---
+
+class TestNonvegDryPreferenceRule:
+    def test_validate(self):
+        rule = NonvegDryPreferenceRule({"name": "nv", "type": "nonveg_dry_preference"})
+        assert rule.validate_config()
+
+    def test_rule_type(self):
+        rule = NonvegDryPreferenceRule({"name": "nv", "type": "nonveg_dry_preference"})
+        assert rule.rule_type == MenuRuleType.NONVEG_DRY_PREFERENCE
+
+    def test_ignores_slot_1(self):
+        rule = NonvegDryPreferenceRule({"name": "nv", "type": "nonveg_dry_preference"})
+        pool = pd.DataFrame({'item': ['chicken_gravy'], 'is_nonveg_dry': [0]})
+        d = dt.date(2026, 3, 24)
+        # slot_num=1 should not filter
+        filtered = rule.pre_filter_pool(pool, d, 'nonveg_main', 'south', {'slot_num': 1})
+        assert len(filtered) == 1
+
+    def test_prefers_dry_for_slot_2(self):
+        rule = NonvegDryPreferenceRule({"name": "nv", "type": "nonveg_dry_preference"})
+        pool = pd.DataFrame({
+            'item': ['chicken_fry', 'chicken_curry'],
+            'is_nonveg_dry': [1, 0],
+            'sub_category': ['', ''],
+            'key_ingredient': ['chicken', 'chicken'],
+            'category': ['', ''],
+        })
+        d = dt.date(2026, 3, 24)
+        filtered = rule.pre_filter_pool(pool, d, 'nonveg_main', 'south',
+                                         {'slot_num': 2, 'cfg': None,
+                                          'banned_by_date': {}, 'pools': {}})
+        assert list(filtered['item']) == ['chicken_fry']
+
+    def test_apply_is_noop(self):
+        from ortools.sat.python import cp_model
+        model = cp_model.CpModel()
+        rule = NonvegDryPreferenceRule({"name": "nv", "type": "nonveg_dry_preference"})
+        rule.apply(model, {}, None, {})
