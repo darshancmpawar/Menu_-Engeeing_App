@@ -209,9 +209,8 @@ class MenuSolver:
     picks exactly one candidate per cell subject to hard constraints.
     """
 
-    # Legacy class attrs kept for external references (e.g. regenerator)
+    # Used by regenerator.py to derive regen caps
     CAP_BY_SLOT_BASE: Dict[str, int] = dict(DEFAULT_CAP_BY_SLOT)
-    CAP_DEFAULT_BASE: int = DEFAULT_CAP
 
     def __init__(
         self,
@@ -363,11 +362,48 @@ class MenuSolver:
                     for rule in self.menu_rules:
                         pool2 = rule.pre_filter_pool(pool2, d, base, day_type, filter_ctx)
 
-                # Theme preference mask (for sampling priority)
-                pref_mask = pd.Series(False, index=pool2.index)
+                # Theme preference mask (for sampling priority + fallback penalty)
+                pref_mask = self._compute_theme_pref_mask(pool2, base, day_type)
 
                 cache[di, slot_id] = (pool2, pref_mask, day_type)
         return cache
+
+    @staticmethod
+    def _compute_theme_pref_mask(pool: pd.DataFrame, base_slot: str,
+                                 day_type: str) -> pd.Series:
+        """Mark items matching the day's theme as preferred.
+
+        Only meaningful for THEME_FALLBACK_SLOTS (starter, veg_dry) where the
+        pool is NOT hard-filtered by cuisine but we still want to prefer
+        theme-matching items via sampling priority and fallback penalty.
+        """
+        if len(pool) == 0 or base_slot not in THEME_FALLBACK_SLOTS:
+            return pd.Series(False, index=pool.index)
+
+        if day_type == 'south' and 'cuisine_family' in pool.columns:
+            return pool['cuisine_family'].map(_norm_str) == 'south_indian'
+        if day_type == 'north' and 'cuisine_family' in pool.columns:
+            return pool['cuisine_family'].map(_norm_str) == 'north_indian'
+        if day_type == 'chinese':
+            # Chinese starters have flag; veg_dry uses text heuristics
+            if base_slot == 'starter' and 'is_chinese_starter' in pool.columns:
+                return pool['is_chinese_starter'].map(_to_bool01) == 1
+            # veg_dry: chinese side mask heuristic
+            text = (pool['item'].astype(str) + ' ' +
+                    pool.get('sub_category', pd.Series('', index=pool.index)).astype(str))
+            text = text.str.lower()
+            return (
+                text.str.contains('chinese', na=False) |
+                text.str.contains('manchurian', na=False) |
+                text.str.contains('schezwan', na=False) |
+                text.str.contains('szechuan', na=False) |
+                text.str.contains('gobi.65', na=False) |
+                text.str.contains('baby.corn', na=False) |
+                text.str.contains('noodle', na=False) |
+                text.str.contains('chilli', na=False)
+            )
+        # mix, biryani, holiday: no preference
+        return pd.Series(False, index=pool.index)
 
     # ----- CP-SAT model -----
 
