@@ -371,6 +371,16 @@ class TestThemeSlotFilterRule:
         filtered = rule.pre_filter_pool(pool, d, 'rice', 'biryani', {'cfg': None})
         assert list(filtered['item']) == ['veg_biryani']
 
+    def test_chinese_does_not_force_starter_flag(self):
+        rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
+        pool = pd.DataFrame({
+            'item': ['paneer_tikka', 'schezwan_mushroom'],
+            'is_chinese_starter': [0, 1],
+        })
+        d = dt.date(2026, 3, 24)
+        filtered = rule.pre_filter_pool(pool, d, 'starter', 'chinese', {'cfg': None})
+        assert set(filtered['item']) == {'paneer_tikka', 'schezwan_mushroom'}
+
     def test_south_filters_cuisine(self):
         rule = ThemeSlotFilterRule({"name": "tf", "type": "theme_slot_filter"})
         pool = pd.DataFrame({

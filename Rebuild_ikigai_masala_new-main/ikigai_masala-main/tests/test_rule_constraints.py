@@ -380,6 +380,40 @@ class TestCouplingConstraint:
         _, status = _solve(model)
         assert status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
 
+    def test_deepfried_starter_can_be_flexible_when_pair_unavailable(self):
+        model = cp_model.CpModel()
+        bread_naan = model.NewBoolVar('bread_naan')
+        rice_jeera = model.NewBoolVar('rice_jeera')
+        starter_df = model.NewBoolVar('starter_df')
+        vd_reg = model.NewBoolVar('vd_reg')
+
+        model.Add(bread_naan == 1)    # no rice-bread candidate exists
+        model.Add(rice_jeera == 1)    # no liquid-rice candidate exists
+        model.Add(starter_df == 1)    # force deep-fried starter
+        model.Add(vd_reg == 1)
+
+        bread_cell = _FakeCell(0, dt.date(2026, 3, 24), 'bread', 'bread',
+                               [pd.Series({'is_rice_bread': 0})], [bread_naan])
+        rice_cell = _FakeCell(0, dt.date(2026, 3, 24), 'rice', 'rice',
+                              [pd.Series({'is_liquid_rice': 0})], [rice_jeera])
+        starter_cell = _FakeCell(0, dt.date(2026, 3, 24), 'starter', 'starter',
+                                 [pd.Series({'is_deep_fried_starter': 1, 'item': 'spring_roll', 'sub_category': ''})],
+                                 [starter_df])
+        vd_cell = _FakeCell(0, dt.date(2026, 3, 24), 'veg_dry', 'veg_dry',
+                            [pd.Series({'is_deep_fried_veg_dry': 0})], [vd_reg])
+
+        rule = CouplingMenuRule({"name": "c", "type": "coupling"})
+        ctx = {
+            'cells': [bread_cell, rice_cell, starter_cell, vd_cell],
+            'dates': [dt.date(2026, 3, 24)],
+            'find_cells_fn': _find_cells,
+            'link_any_fn': _link_any,
+        }
+        rule.apply(model, {}, None, ctx)
+
+        _, status = _solve(model)
+        assert status in (cp_model.OPTIMAL, cp_model.FEASIBLE)
+
 
 # ---------------------------------------------------------------------------
 # WeekSignatureCooldownMenuRule — signature parsing + constraint
