@@ -245,6 +245,13 @@ def save_plan():
         week_plan_raw = data.get('week_plan', {})
         week_start_str = data.get('week_start')
 
+        if not client_name:
+            return jsonify({'success': False, 'error': 'client_name is required'}), 400
+        if not week_plan_raw:
+            return jsonify({'success': False, 'error': 'week_plan is required'}), 400
+        if not week_start_str:
+            return jsonify({'success': False, 'error': 'week_start is required'}), 400
+
         # Convert string date keys to date objects
         week_plan = {}
         for d_str, slots in week_plan_raw.items():
