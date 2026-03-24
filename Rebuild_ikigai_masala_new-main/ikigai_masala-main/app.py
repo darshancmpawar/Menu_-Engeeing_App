@@ -128,8 +128,17 @@ if st.sidebar.button("Generate Menu Plan", type="primary"):
                     num_days=num_days,
                     time_limit_seconds=time_limit,
                 )
-                st.session_state.plan = result.get("solution", {})
-                st.session_state.plan_dates = sorted(result.get("solution", {}).keys())
+                raw_solution = result.get("solution", {})
+                # Flatten: extract "items" sub-dict and item strings
+                flat_plan = {}
+                for date_key, day_data in raw_solution.items():
+                    items = day_data.get("items", {}) if isinstance(day_data, dict) else {}
+                    flat_plan[date_key] = {
+                        slot_id: slot_val.get("item", "") if isinstance(slot_val, dict) else str(slot_val)
+                        for slot_id, slot_val in items.items()
+                    }
+                st.session_state.plan = flat_plan
+                st.session_state.plan_dates = sorted(flat_plan.keys())
                 st.session_state.client_name = selected_client
                 st.session_state.changes_log = []
                 st.success(result.get("message", "Plan generated"))
@@ -206,7 +215,15 @@ if plan and plan_dates:
                         num_days=len(plan_dates),
                         time_limit_seconds=time_limit,
                     )
-                    st.session_state.plan = result.get("solution", st.session_state.plan)
+                    raw_regen = result.get("solution", {})
+                    flat_regen = {}
+                    for date_key, day_data in raw_regen.items():
+                        items = day_data.get("items", {}) if isinstance(day_data, dict) else {}
+                        flat_regen[date_key] = {
+                            slot_id: slot_val.get("item", "") if isinstance(slot_val, dict) else str(slot_val)
+                            for slot_id, slot_val in items.items()
+                        }
+                    st.session_state.plan = flat_regen if flat_regen else st.session_state.plan
                     st.session_state.plan_dates = sorted(st.session_state.plan.keys())
                     st.session_state.changes_log.append(
                         f"Regenerated {sum(len(v) for v in regen_selections.values())} cells"
