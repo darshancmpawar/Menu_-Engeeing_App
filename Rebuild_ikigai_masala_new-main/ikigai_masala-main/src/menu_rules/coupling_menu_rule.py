@@ -97,7 +97,13 @@ class CouplingMenuRule(BaseMenuRule):
             # Coupling constraints
             model.Add(bread_rb <= rice_liq)
             model.Add(bread_rb <= starter_df)
-            model.Add(starter_df <= bread_rb)
+            # Prefer coupling deep-fried starters with rice-bread only when the
+            # paired rice/bread pattern is actually available in this day's pools.
+            # This keeps the legacy coupling behavior in normal cases while
+            # avoiding hard infeasibility when themed filters leave no liquid-rice
+            # or rice-bread candidates.
+            if bread_rb_lits and rice_liq_lits:
+                model.Add(starter_df <= bread_rb)
             model.Add(vegdry_any <= rice_liq)
             model.Add(vegdry_any <= bread_rb)
 

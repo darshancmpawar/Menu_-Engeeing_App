@@ -27,7 +27,6 @@ _CHINESE_FLAG_MAP = {
     'rice': 'is_chinese_fried_rice',
     'veg_gravy': 'is_chinese_veg_gravy',
     'nonveg_main': 'is_chinese_chicken_gravy',
-    'starter': 'is_chinese_starter',
 }
 
 # Biryani flag map
