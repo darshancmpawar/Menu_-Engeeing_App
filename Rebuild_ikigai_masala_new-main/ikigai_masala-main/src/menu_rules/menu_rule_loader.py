@@ -26,6 +26,7 @@ from .item_cooldown_menu_rule import ItemCooldownMenuRule
 from .ricebread_gap_menu_rule import RiceBreadGapMenuRule
 from .theme_slot_filter_rule import ThemeSlotFilterRule
 from .nonveg_dry_preference_rule import NonvegDryPreferenceRule
+from .nonveg_biryani_weekly_rule import NonvegBiryaniWeeklyRule
 
 
 class MenuRuleLoader:
@@ -48,6 +49,7 @@ class MenuRuleLoader:
         'ricebread_gap': RiceBreadGapMenuRule,
         'theme_slot_filter': ThemeSlotFilterRule,
         'nonveg_dry_preference': NonvegDryPreferenceRule,
+        'nonveg_biryani_weekly': NonvegBiryaniWeeklyRule,
     }
 
     def __init__(self, config_path: Optional[str] = None):

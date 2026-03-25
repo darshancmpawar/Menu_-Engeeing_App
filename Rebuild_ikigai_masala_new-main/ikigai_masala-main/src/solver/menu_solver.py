@@ -64,6 +64,8 @@ class SolverConfig:
     seed: int = 7
     time_limit_sec: int = 240
     slot_counts: Optional[Dict[str, int]] = None
+    active_base_slots: Optional[List[str]] = None
+    explicit_dates: Optional[List[dt.date]] = None
     # Color constraints
     color_col: str = 'item_color'
     color_slots: List[str] = field(default_factory=lambda: [
@@ -235,9 +237,13 @@ class MenuSolver:
         Returns:
             (week_plan, dates) where week_plan maps date -> {slot_id: item_string}
         """
-        dates = [self.cfg.start_date + dt.timedelta(days=i) for i in range(self.cfg.days)]
+        if self.cfg.explicit_dates:
+            dates = list(self.cfg.explicit_dates)
+        else:
+            dates = [self.cfg.start_date + dt.timedelta(days=i) for i in range(self.cfg.days)]
+        base_slots = self.cfg.active_base_slots or BASE_SLOT_NAMES
         expanded_slots = _expand_slots_in_order(
-            BASE_SLOT_NAMES, self.cfg.slot_counts or {s: 1 for s in BASE_SLOT_NAMES}
+            base_slots, self.cfg.slot_counts or {s: 1 for s in base_slots}
         )
 
         cap_multipliers = self.cfg.cap_multipliers

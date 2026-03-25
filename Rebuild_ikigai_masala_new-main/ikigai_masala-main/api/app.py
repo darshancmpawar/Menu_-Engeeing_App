@@ -81,7 +81,7 @@ def _build_history_context(df, client_name, start_date, num_days):
     hm = HistoryManager().load(HISTORY_LONG_PATH, HISTORY_WEEKS_PATH)
     hm = hm.filter_by_client(client_name)
 
-    dates = [start_date + dt.timedelta(days=i) for i in range(num_days)]
+    dates = _weekdays_from(start_date, num_days)
     banned = hm.banned_items_by_date(dates, const_slots=CONST_SLOTS,
                                       repeatable_items=REPEATABLE_ITEM_BASES)
     ricebread_items = set(
@@ -92,13 +92,34 @@ def _build_history_context(df, client_name, start_date, num_days):
     return banned, rb_ban, recent_sigs
 
 
+def _weekdays_from(start_date, num_days):
+    """Return up to num_days weekday dates (skip Sat/Sun) starting from start_date."""
+    dates = []
+    d = start_date
+    while len(dates) < num_days:
+        if d.weekday() < 5:  # Mon-Fri
+            dates.append(d)
+        d += dt.timedelta(days=1)
+    return dates
+
+
+def _client_base_slots(client_cfg):
+    """Return only the base slots the client actually uses (excluding constants)."""
+    return [s for s in client_cfg.active_slots if s not in CONST_SLOTS
+            and '__' not in s]
+
+
 def _build_solver_config(df, client_cfg, start_date, num_days, time_limit):
     """Shared helper to build SolverConfig."""
+    weekday_dates = _weekdays_from(start_date, num_days)
+    active_base = _client_base_slots(client_cfg)
     return SolverConfig(
         days=num_days,
         start_date=start_date,
         time_limit_sec=time_limit,
         slot_counts=client_cfg.slot_counts,
+        active_base_slots=active_base or None,
+        explicit_dates=weekday_dates,
         premium_flag_col='is_premium_veg' if 'is_premium_veg' in df.columns and int(df['is_premium_veg'].sum()) > 0 else None,
     )
 
