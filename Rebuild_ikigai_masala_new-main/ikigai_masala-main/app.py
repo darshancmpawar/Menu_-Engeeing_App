@@ -8,6 +8,16 @@ Run with:
     streamlit run app.py
 """
 
+import os
+import sys
+
+# Ensure the app directory is on sys.path (needed when Streamlit Cloud
+# launches from the repo root instead of this subdirectory).
+_APP_DIR = os.path.dirname(os.path.abspath(__file__))
+if _APP_DIR not in sys.path:
+    sys.path.insert(0, _APP_DIR)
+os.chdir(_APP_DIR)
+
 import datetime as dt
 import io
 import csv
