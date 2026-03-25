@@ -43,7 +43,9 @@ def test_display_label_unknown_slot():
 
 
 def test_format_item_for_ui():
-    assert format_item_for_ui("  jeera rice(Y)  ") == "jeera rice(Y)"
+    assert format_item_for_ui("  jeera_rice(Y)  ") == "Jeera Rice"
+    assert format_item_for_ui("dal_tadka(R)") == "Dal Tadka"
+    assert format_item_for_ui("steamed rice") == "Steamed Rice"
     assert format_item_for_ui("") == ""
     assert format_item_for_ui(None) == ""
 

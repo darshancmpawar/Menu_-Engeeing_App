@@ -23,6 +23,7 @@ from ui.formatters import (
     theme_label,
     display_label_for_slot_id,
     format_item_for_ui,
+    format_item_html,
     slot_sort_key,
 )
 
@@ -62,14 +63,14 @@ def _ensure_backend_running():
 
 
 # ---------------------------------------------------------------------------
-# Theme config
+# Theme badges (dark-mode friendly)
 # ---------------------------------------------------------------------------
 _THEME_COLORS = {
-    0: ("#dcfce7", "#166534", "Mix"),
-    1: ("#ffedd5", "#9a3412", "Chinese"),
-    2: ("#fee2e2", "#991b1b", "Biryani"),
-    3: ("#dbeafe", "#1e40af", "South Indian"),
-    4: ("#f3e8ff", "#6b21a8", "North Indian"),
+    0: ("#22543d", "#86efac", "Mix"),
+    1: ("#7c2d12", "#fdba74", "Chinese"),
+    2: ("#7f1d1d", "#fca5a5", "Biryani"),
+    3: ("#1e3a5f", "#93c5fd", "South Indian"),
+    4: ("#4c1d95", "#c4b5fd", "North Indian"),
 }
 
 # ---------------------------------------------------------------------------
@@ -83,82 +84,111 @@ st.set_page_config(
 )
 
 # ---------------------------------------------------------------------------
-# CSS
+# Dark Theme CSS
 # ---------------------------------------------------------------------------
 st.markdown("""
 <style>
-    /* --- Reset & Global --- */
+    /* --- Global dark --- */
+    .stApp { background-color: #0f0f0f; }
     .block-container { padding-top: 1rem; padding-bottom: 1rem; max-width: 1200px; }
-    [data-testid="stSidebar"] { background: #fafaf9; border-right: 1px solid #e7e5e4; }
-    header[data-testid="stHeader"] { background: transparent; }
+    header[data-testid="stHeader"] { background: #0f0f0f; }
 
     /* --- Sidebar --- */
-    .sidebar-brand { padding: 0.5rem 0 1rem; border-bottom: 1px solid #e7e5e4; margin-bottom: 1rem; }
-    .sidebar-brand h2 { margin: 0; font-size: 1.15rem; color: #292524; font-weight: 700; }
-    .sidebar-brand p { margin: 0.15rem 0 0; font-size: 0.78rem; color: #78716c; }
+    [data-testid="stSidebar"] { background: #171717; border-right: 1px solid #262626; }
+    [data-testid="stSidebar"] label { color: #a3a3a3 !important; }
 
-    /* --- Page title --- */
-    .page-title { font-size: 1.4rem; font-weight: 700; color: #1c1917; margin: 0 0 0.25rem; }
-    .page-subtitle { font-size: 0.85rem; color: #78716c; margin: 0 0 1rem; }
+    .sidebar-brand {
+        padding: 0.75rem 0 1.25rem; border-bottom: 1px solid #262626;
+        margin-bottom: 1.25rem;
+    }
+    .sidebar-brand h2 {
+        margin: 0; font-size: 1.2rem; color: #f5f5f5; font-weight: 700;
+        letter-spacing: -0.3px;
+    }
+    .sidebar-brand p { margin: 0.2rem 0 0; font-size: 0.75rem; color: #737373; }
+
+    /* --- Page header --- */
+    .page-title {
+        font-size: 1.5rem; font-weight: 700; color: #f5f5f5;
+        margin: 0 0 0.15rem; letter-spacing: -0.3px;
+    }
+    .page-subtitle { font-size: 0.85rem; color: #737373; margin: 0 0 1.25rem; }
 
     /* --- Metric cards --- */
-    .metric-row { display: flex; gap: 0.75rem; margin-bottom: 1.25rem; }
+    .metric-row { display: flex; gap: 0.75rem; margin-bottom: 1.5rem; }
     .metric-card {
-        flex: 1; background: #fff; border: 1px solid #e7e5e4; border-radius: 8px;
-        padding: 0.6rem 0.9rem;
+        flex: 1; background: #171717; border: 1px solid #262626;
+        border-radius: 10px; padding: 0.7rem 1rem;
     }
-    .metric-card .label { font-size: 0.7rem; color: #a8a29e; text-transform: uppercase;
-        letter-spacing: 0.4px; font-weight: 600; }
-    .metric-card .value { font-size: 1.15rem; font-weight: 700; color: #1c1917; margin-top: 0.1rem; }
+    .metric-card .label {
+        font-size: 0.65rem; color: #737373; text-transform: uppercase;
+        letter-spacing: 0.5px; font-weight: 600;
+    }
+    .metric-card .value {
+        font-size: 1.2rem; font-weight: 700; color: #f5f5f5; margin-top: 0.15rem;
+    }
 
     /* --- Menu table --- */
     .menu-table {
         width: 100%; border-collapse: collapse; font-size: 0.82rem;
-        border: 1px solid #e7e5e4; border-radius: 8px; overflow: hidden;
+        border: 1px solid #262626; border-radius: 10px; overflow: hidden;
     }
     .menu-table thead th {
-        background: #292524; color: #fafaf9; padding: 0.55rem 0.7rem;
+        background: #1a1a1a; color: #d4d4d4; padding: 0.6rem 0.75rem;
         text-align: center; font-weight: 600; font-size: 0.78rem;
-        border-right: 1px solid #44403c;
+        border-right: 1px solid #262626; border-bottom: 1px solid #262626;
     }
     .menu-table thead th:first-child { text-align: left; }
     .menu-table thead th:last-child { border-right: none; }
-    .menu-table thead .day-label { display: block; }
+    .menu-table thead .day-label { display: block; color: #e5e5e5; }
     .menu-table thead .theme-tag {
-        display: inline-block; margin-top: 3px; padding: 1px 6px;
-        border-radius: 4px; font-size: 0.65rem; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.3px;
+        display: inline-block; margin-top: 4px; padding: 2px 8px;
+        border-radius: 4px; font-size: 0.6rem; font-weight: 700;
+        text-transform: uppercase; letter-spacing: 0.4px;
     }
     .menu-table tbody td {
-        padding: 0.45rem 0.7rem; border-bottom: 1px solid #f5f5f4;
-        border-right: 1px solid #f5f5f4; color: #44403c;
+        padding: 0.5rem 0.75rem; border-bottom: 1px solid #1f1f1f;
+        border-right: 1px solid #1f1f1f; color: #d4d4d4;
+        background: #0f0f0f;
     }
     .menu-table tbody td:first-child {
-        font-weight: 600; color: #57534e; background: #fafaf9;
-        white-space: nowrap; min-width: 100px;
+        font-weight: 600; color: #a3a3a3; background: #141414;
+        white-space: nowrap; min-width: 110px; font-size: 0.78rem;
     }
     .menu-table tbody td:last-child { border-right: none; }
     .menu-table tbody tr:last-child td { border-bottom: none; }
-    .menu-table tbody tr:hover td { background: #fafaf9; }
-    .menu-table tbody tr:hover td:first-child { background: #f5f5f4; }
+    .menu-table tbody tr:hover td { background: #171717; }
+    .menu-table tbody tr:hover td:first-child { background: #1a1a1a; }
 
     /* --- Empty state --- */
     .empty-state {
-        text-align: center; padding: 4rem 2rem; border: 2px dashed #d6d3d1;
+        text-align: center; padding: 4rem 2rem; border: 2px dashed #262626;
         border-radius: 12px; margin: 2rem 0;
     }
     .empty-state .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
-    .empty-state h3 { color: #44403c; margin: 0 0 0.3rem; font-size: 1.1rem; }
-    .empty-state p { color: #a8a29e; font-size: 0.85rem; margin: 0; }
+    .empty-state h3 { color: #d4d4d4; margin: 0 0 0.3rem; font-size: 1.1rem; }
+    .empty-state p { color: #737373; font-size: 0.85rem; margin: 0; }
 
     /* --- Log entry --- */
     .log-entry {
-        padding: 0.35rem 0.7rem; background: #fafaf9; border-left: 3px solid #a8a29e;
-        border-radius: 0 4px 4px 0; margin-bottom: 0.35rem; font-size: 0.8rem; color: #57534e;
+        padding: 0.35rem 0.7rem; background: #171717;
+        border-left: 3px solid #525252; border-radius: 0 4px 4px 0;
+        margin-bottom: 0.35rem; font-size: 0.8rem; color: #a3a3a3;
     }
 
     /* --- Regen header --- */
-    .regen-day-header { font-weight: 600; font-size: 0.82rem; color: #292524; margin-bottom: 0.25rem; }
+    .regen-day-header {
+        font-weight: 600; font-size: 0.82rem; color: #e5e5e5;
+        margin-bottom: 0.25rem;
+    }
+
+    /* --- Streamlit overrides for dark --- */
+    .stMarkdown, .stMarkdown p, .stCaption { color: #a3a3a3; }
+    .stExpander { border-color: #262626 !important; }
+    div[data-testid="stExpander"] details {
+        background: #141414; border: 1px solid #262626; border-radius: 8px;
+    }
+    div[data-testid="stExpander"] summary span { color: #d4d4d4 !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -281,7 +311,7 @@ if plan and plan_dates:
     for d_str in plan_dates:
         d = dt.date.fromisoformat(d_str)
         wd = d.weekday()
-        bg, fg, label = _THEME_COLORS.get(wd, ("#f5f5f4", "#57534e", ""))
+        bg, fg, label = _THEME_COLORS.get(wd, ("#262626", "#a3a3a3", ""))
         header_html += (
             f'<th><span class="day-label">{d.strftime("%a %d %b")}</span>'
             f'<span class="theme-tag" style="background:{bg};color:{fg};">'
@@ -292,8 +322,8 @@ if plan and plan_dates:
     for slot_id in sorted_slots:
         body_html += f'<tr><td>{display_label_for_slot_id(slot_id)}</td>'
         for d_str in plan_dates:
-            item = format_item_for_ui(plan.get(d_str, {}).get(slot_id, ""))
-            body_html += f'<td>{item}</td>'
+            raw_item = plan.get(d_str, {}).get(slot_id, "")
+            body_html += f'<td>{format_item_html(raw_item)}</td>'
         body_html += '</tr>'
 
     st.markdown(
@@ -320,7 +350,7 @@ if plan and plan_dates:
         for slot_id in sorted_slots:
             row = [display_label_for_slot_id(slot_id)]
             for d_str in plan_dates:
-                row.append(plan.get(d_str, {}).get(slot_id, ""))
+                row.append(format_item_for_ui(plan.get(d_str, {}).get(slot_id, "")))
             writer.writerow(row)
         st.download_button("Download CSV", data=buf.getvalue(),
             file_name=f"menu_{st.session_state.client_name}.csv",
@@ -340,13 +370,13 @@ if plan and plan_dates:
         for i, d_str in enumerate(plan_dates):
             d = dt.date.fromisoformat(d_str)
             wd = d.weekday()
-            bg, fg, label = _THEME_COLORS.get(wd, ("#f5f5f4", "#57534e", ""))
+            bg, fg, label = _THEME_COLORS.get(wd, ("#262626", "#a3a3a3", ""))
             col = cols[i % len(cols)]
             with col:
                 st.markdown(
                     f'<div class="regen-day-header">{d.strftime("%a %d %b")} '
                     f'<span class="theme-tag" style="background:{bg};color:{fg};'
-                    f'font-size:0.65rem;">{label}</span></div>',
+                    f'font-size:0.6rem;">{label}</span></div>',
                     unsafe_allow_html=True)
                 day_slots = sorted(plan.get(d_str, {}).keys(), key=slot_sort_key)
                 selected = st.multiselect(f"Slots for {d_str}", day_slots,

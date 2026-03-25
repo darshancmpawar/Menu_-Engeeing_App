@@ -19,6 +19,17 @@ THEME_LABELS = {
     6: "Weekend Special",
 }
 
+# Map color initial -> (full name, CSS color for display)
+_COLOR_MAP = {
+    'R': ('Red', '#ef4444'),
+    'G': ('Green', '#22c55e'),
+    'B': ('Brown', '#a16207'),
+    'Y': ('Yellow', '#eab308'),
+    'W': ('White', '#a1a1aa'),
+    'O': ('Orange', '#f97316'),
+    'K': ('Black', '#71717a'),
+}
+
 
 def theme_label(weekday: int) -> str:
     return THEME_LABELS.get(weekday, "")
@@ -28,16 +39,50 @@ def display_label_for_slot_id(slot_id: str) -> str:
     return DISPLAY_SLOT_NAME.get(slot_id, slot_id.replace("_", " ").title())
 
 
+def _prettify_item_name(name: str) -> str:
+    """Convert underscore-separated item names to readable title case.
+
+    Examples:
+        'veg_fried_rice' -> 'Veg Fried Rice'
+        'hydrabad_chicken_biryani' -> 'Hydrabad Chicken Biryani'
+        'dal_tadka' -> 'Dal Tadka'
+    """
+    if not name:
+        return ""
+    return name.replace("_", " ").strip().title()
+
+
 def format_item_for_ui(item_str: str) -> str:
+    """Format item string for plain-text display (no HTML)."""
     if not item_str:
         return ""
-    return item_str.strip()
+    cleaned = re.sub(r'\s*\([A-Z]\)\s*$', '', item_str)
+    return _prettify_item_name(cleaned)
+
+
+def format_item_html(item_str: str) -> str:
+    """Format item string as HTML with colored color tag.
+
+    Input:  'veg_fried_rice(Y)'
+    Output: 'Veg Fried Rice <span style="color:#eab308;">(Yellow)</span>'
+    """
+    if not item_str:
+        return ""
+    m = re.search(r'\(([A-Z])\)\s*$', item_str)
+    cleaned = re.sub(r'\s*\([A-Z]\)\s*$', '', item_str)
+    name = _prettify_item_name(cleaned)
+
+    if m:
+        initial = m.group(1)
+        color_name, css_color = _COLOR_MAP.get(initial, (initial, '#a1a1aa'))
+        return (f'{name} <span style="color:{css_color};font-weight:600;'
+                f'font-size:0.75em;">({color_name})</span>')
+    return name
 
 
 def pretty_text(item_str: str) -> str:
     if not item_str:
         return ""
-    # Strip color suffix like (R), (G), etc.
     cleaned = re.sub(r'\s*\([A-Z]\)\s*$', '', item_str)
     return cleaned.strip().title()
 
