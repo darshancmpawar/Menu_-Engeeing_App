@@ -7,9 +7,7 @@ Example: Rippling has veg_dry x2, Stripe has nonveg_main x2.
 import streamlit as st
 from typing import Dict, List
 
-
-def _prettify(name: str) -> str:
-    return name.replace('_', ' ').strip().title()
+from ui.formatters import prettify_slot_name
 
 
 def render_multi_slot_editor(
@@ -42,7 +40,7 @@ def render_multi_slot_editor(
         with cols[idx % 3]:
             current = current_slot_counts.get(slot, 1)
             val = st.number_input(
-                _prettify(slot),
+                prettify_slot_name(slot),
                 min_value=1,
                 max_value=3,
                 value=current,
@@ -55,7 +53,7 @@ def render_multi_slot_editor(
     multi_slots = [s for s in editable if updated.get(s, 1) > 1]
     if multi_slots:
         tags = ', '.join(
-            f"**{_prettify(s)}** x{updated[s]}" for s in multi_slots
+            f"**{prettify_slot_name(s)}** x{updated[s]}" for s in multi_slots
         )
         st.markdown(
             f'<p style="font-size:0.78rem;color:#86efac;margin:0.5rem 0 0;">'

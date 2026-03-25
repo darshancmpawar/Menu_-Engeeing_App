@@ -8,10 +8,7 @@ from typing import Optional
 
 import streamlit as st
 from ui.api_client import MenuApiClient
-
-
-def _prettify(name: str) -> str:
-    return name.replace('_', ' ').strip().title()
+from ui.formatters import prettify_slot_name
 
 
 def render_client_editor(api: MenuApiClient, metadata: dict) -> Optional[str]:
@@ -48,14 +45,14 @@ def render_client_editor(api: MenuApiClient, metadata: dict) -> Optional[str]:
                          use_container_width=True, type="secondary"):
                 st.session_state['editor_confirm_delete'] = True
 
-        if st.session_state.get('editor_confirm_delete'):
+        if st.session_state.editor_confirm_delete:
             st.warning(f"Delete **{selected}**? This cannot be undone.")
             c1, c2, _ = st.columns([1, 1, 2])
             with c1:
                 if st.button("Confirm Delete", type="primary", key="editor_confirm_del_btn"):
                     try:
                         api.delete_client(selected)
-                        st.session_state.pop('editor_confirm_delete', None)
+                        st.session_state.editor_confirm_delete = False
                         st.session_state.pop('editor_client_select', None)
                         st.toast(f"Deleted {selected}", icon="✓")
                         st.rerun()
@@ -63,7 +60,7 @@ def render_client_editor(api: MenuApiClient, metadata: dict) -> Optional[str]:
                         st.error(f"Delete failed: {e}")
             with c2:
                 if st.button("Cancel", key="editor_cancel_del_btn"):
-                    st.session_state.pop('editor_confirm_delete', None)
+                    st.session_state.editor_confirm_delete = False
                     st.rerun()
 
         return selected
@@ -82,7 +79,7 @@ def render_client_editor(api: MenuApiClient, metadata: dict) -> Optional[str]:
 
         if new_cat:
             slots = categories.get(new_cat, [])
-            st.caption(f"Slots: {', '.join(_prettify(s) for s in slots)}")
+            st.caption(f"Slots: {', '.join(prettify_slot_name(s) for s in slots)}")
 
         if st.button("Create Client", type="primary", key="editor_create_client_btn",
                      use_container_width=True):

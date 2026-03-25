@@ -22,11 +22,6 @@ def _inject_editor_css():
     """Inject editor-specific styles (same dark palette as main app)."""
     st.markdown("""
     <style>
-        .editor-header {
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 0 1rem; border-bottom: 1px solid #262626;
-            margin-bottom: 1.5rem;
-        }
         .editor-title {
             font-size: 1.4rem; font-weight: 700; color: #f5f5f5;
             letter-spacing: -0.3px; margin: 0;
@@ -37,11 +32,6 @@ def _inject_editor_css():
         .editor-section {
             background: #171717; border: 1px solid #262626;
             border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem;
-        }
-        .editor-save-bar {
-            position: sticky; bottom: 0; background: #0f0f0f;
-            padding: 1rem 0; border-top: 1px solid #262626;
-            z-index: 100;
         }
     </style>
     """, unsafe_allow_html=True)

@@ -5,7 +5,7 @@ UI formatting utilities for menu plan display.
 import re
 from typing import Dict, Optional
 
-from src.preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, CONSTANT_ITEMS
+from src.preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, BASE_SLOT_NAMES
 
 
 # Day-of-week theme labels (Monday=0)
@@ -31,12 +31,43 @@ _COLOR_MAP = {
 }
 
 
+# Theme badge colors keyed by theme name: (background, foreground)
+THEME_TAG_COLORS = {
+    'mix': ('#22543d', '#86efac'),
+    'chinese': ('#7c2d12', '#fdba74'),
+    'biryani': ('#7f1d1d', '#fca5a5'),
+    'south': ('#1e3a5f', '#93c5fd'),
+    'north': ('#4c1d95', '#c4b5fd'),
+}
+
+# Theme badge colors keyed by weekday index (Mon=0): (bg, fg, label)
+WEEKDAY_THEME_BADGES = {
+    0: ("#22543d", "#86efac", "Mix"),
+    1: ("#7c2d12", "#fdba74", "Chinese"),
+    2: ("#7f1d1d", "#fca5a5", "Biryani"),
+    3: ("#1e3a5f", "#93c5fd", "South Indian"),
+    4: ("#4c1d95", "#c4b5fd", "North Indian"),
+}
+
+
 def theme_label(weekday: int) -> str:
     return THEME_LABELS.get(weekday, "")
 
 
 def display_label_for_slot_id(slot_id: str) -> str:
     return DISPLAY_SLOT_NAME.get(slot_id, slot_id.replace("_", " ").title())
+
+
+def prettify_slot_name(name: str) -> str:
+    """Convert underscore-separated slot/item names to readable title case.
+
+    Examples:
+        'veg_dry' -> 'Veg Dry'
+        'nonveg_main' -> 'Nonveg Main'
+    """
+    if not name:
+        return ""
+    return name.replace("_", " ").strip().title()
 
 
 def _prettify_item_name(name: str) -> str:
@@ -94,7 +125,6 @@ def color_suffix(item_str: str) -> Optional[str]:
 
 def slot_sort_key(slot_id: str) -> int:
     """Return sort index for display ordering."""
-    from src.preprocessor.pool_builder import BASE_SLOT_NAMES
     base = slot_id.split("__")[0] if "__" in slot_id else slot_id
     try:
         return BASE_SLOT_NAMES.index(base)

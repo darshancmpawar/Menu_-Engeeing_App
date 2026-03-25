@@ -12,7 +12,11 @@ import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-from ._helpers import weekday_type as _weekday_type, weekday_type_for_config as _weekday_type_cfg, theme_label as _theme_label, strip_color_suffix as _strip_color_suffix
+from ._helpers import (
+    weekday_type_for_config as _weekday_type_cfg,
+    theme_label as _theme_label,
+    strip_color_suffix as _strip_color_suffix,
+)
 from ..preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, _base_slot, _slot_num
 
 

@@ -21,6 +21,7 @@ from flask_cors import CORS
 from api.config import (
     DEFAULT_EXCEL_PATH, CLIENTS_CONFIG_PATH, MENU_RULES_CONFIG_PATH,
     HISTORY_LONG_PATH, HISTORY_WEEKS_PATH, API_HOST, API_PORT, DEBUG,
+    MIN_NUM_DAYS, MAX_NUM_DAYS, MIN_TIME_LIMIT_SECONDS, MAX_TIME_LIMIT_SECONDS,
 )
 from src.preprocessor import ExcelReader, DataCleanser, ColumnMapper
 from src.preprocessor.pool_builder import PoolBuilder, BASE_SLOT_NAMES, CONST_SLOTS, REPEATABLE_ITEM_BASES
@@ -141,8 +142,8 @@ def plan_menu():
         data = request.get_json()
         client_name = data.get('client_name')
         start_date_str = data.get('start_date')
-        num_days = int(data.get('num_days', 5))
-        time_limit = int(data.get('time_limit_seconds', 240))
+        num_days = max(MIN_NUM_DAYS, min(MAX_NUM_DAYS, int(data.get('num_days', 5))))
+        time_limit = max(MIN_TIME_LIMIT_SECONDS, min(MAX_TIME_LIMIT_SECONDS, int(data.get('time_limit_seconds', 240))))
 
         if not client_name:
             return jsonify({'success': False, 'error': 'client_name is required'}), 400
@@ -197,8 +198,8 @@ def regenerate_cells():
         base_plan_raw = data.get('base_plan', {})
         replace_slots_raw = data.get('replace_slots', {})
         start_date_str = data.get('start_date')
-        num_days = int(data.get('num_days', 5))
-        time_limit = int(data.get('time_limit_seconds', 240))
+        num_days = max(MIN_NUM_DAYS, min(MAX_NUM_DAYS, int(data.get('num_days', 5))))
+        time_limit = max(MIN_TIME_LIMIT_SECONDS, min(MAX_TIME_LIMIT_SECONDS, int(data.get('time_limit_seconds', 240))))
 
         if not client_name:
             return jsonify({'success': False, 'error': 'client_name is required'}), 400

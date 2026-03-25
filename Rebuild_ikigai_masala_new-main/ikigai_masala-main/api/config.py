@@ -52,6 +52,6 @@ MAX_NUM_DAYS = 30
 
 API_HOST = os.getenv('API_HOST', '0.0.0.0')
 API_PORT = int(os.getenv('API_PORT', '5000'))
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'false').lower() == 'true'
 
 CORS_ORIGINS = os.getenv('CORS_ORIGINS', '*').split(',')

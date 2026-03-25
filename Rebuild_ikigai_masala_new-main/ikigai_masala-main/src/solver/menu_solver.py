@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 import pandas as pd
 from ortools.sat.python import cp_model
 
-from ._helpers import weekday_type as _weekday_type, weekday_type_for_config as _weekday_type_cfg
+from ._helpers import weekday_type_for_config as _weekday_type_cfg
 from ..menu_rules.base_menu_rule import BaseMenuRule
 from ..preprocessor.pool_builder import (
     BASE_SLOT_NAMES, CONSTANT_ITEMS, EXEMPT_FROM_CUISINE,

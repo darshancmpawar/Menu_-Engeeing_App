@@ -3,11 +3,9 @@ Slot Editor — Toggle base slots on/off for a client.
 """
 
 import streamlit as st
-from typing import Dict, List
+from typing import List
 
-
-def _prettify(name: str) -> str:
-    return name.replace('_', ' ').strip().title()
+from ui.formatters import prettify_slot_name
 
 
 def render_slot_editor(
@@ -35,7 +33,7 @@ def render_slot_editor(
         "Active Slots",
         options=toggleable,
         default=[s for s in toggleable if s in active_set],
-        format_func=_prettify,
+        format_func=prettify_slot_name,
         key="editor_slot_multiselect",
         label_visibility="collapsed",
     )

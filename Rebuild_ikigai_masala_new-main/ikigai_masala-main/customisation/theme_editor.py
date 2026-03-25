@@ -8,6 +8,8 @@ Each client can override any day to any of the 5 themes.
 import streamlit as st
 from typing import Dict, List
 
+from ui.formatters import THEME_TAG_COLORS
+
 _WEEKDAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday']
 
 _THEME_DISPLAY = {
@@ -16,14 +18,6 @@ _THEME_DISPLAY = {
     'biryani': 'Biryani',
     'south': 'South Indian',
     'north': 'North Indian',
-}
-
-_THEME_TAG_COLORS = {
-    'mix': ('#22543d', '#86efac'),
-    'chinese': ('#7c2d12', '#fdba74'),
-    'biryani': ('#7f1d1d', '#fca5a5'),
-    'south': ('#1e3a5f', '#93c5fd'),
-    'north': ('#4c1d95', '#c4b5fd'),
 }
 
 
@@ -73,7 +67,7 @@ def render_theme_editor(
             updated[day] = chosen
 
         with col_tag:
-            bg, fg = _THEME_TAG_COLORS.get(chosen, ('#262626', '#a3a3a3'))
+            bg, fg = THEME_TAG_COLORS.get(chosen, ('#262626', '#a3a3a3'))
             is_override = (chosen != default_val)
             badge_extra = ' border:1px solid ' + fg + ';' if is_override else ''
             label = _THEME_DISPLAY.get(chosen, chosen.title())
