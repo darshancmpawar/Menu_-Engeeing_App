@@ -36,6 +36,7 @@ from ui.formatters import (
     format_item_html,
     slot_sort_key,
 )
+from customisation.main import render_customisation_editor
 
 logger = logging.getLogger(__name__)
 
@@ -212,12 +213,20 @@ client = MenuApiClient(_BACKEND_URL)
 # Session state
 # ---------------------------------------------------------------------------
 for key, default in [("plan", None), ("plan_dates", []),
-                     ("client_name", None), ("changes_log", [])]:
+                     ("client_name", None), ("changes_log", []),
+                     ("view", "planner")]:
     if key not in st.session_state:
         st.session_state[key] = default
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# Editor view — full page, no sidebar
+# ---------------------------------------------------------------------------
+if st.session_state.view == "editor":
+    render_customisation_editor(client)
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Sidebar (planner view only)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("""<div class="sidebar-brand">
@@ -249,14 +258,19 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 # Page header
 # ---------------------------------------------------------------------------
-st.markdown('<p class="page-title">Menu Plan</p>', unsafe_allow_html=True)
-
-if st.session_state.client_name:
-    st.markdown(f'<p class="page-subtitle">{st.session_state.client_name}</p>',
-                unsafe_allow_html=True)
-else:
-    st.markdown('<p class="page-subtitle">Generate a plan to get started</p>',
-                unsafe_allow_html=True)
+_hdr_col1, _hdr_col2 = st.columns([5, 1])
+with _hdr_col1:
+    st.markdown('<p class="page-title">Menu Plan</p>', unsafe_allow_html=True)
+    if st.session_state.client_name:
+        st.markdown(f'<p class="page-subtitle">{st.session_state.client_name}</p>',
+                    unsafe_allow_html=True)
+    else:
+        st.markdown('<p class="page-subtitle">Generate a plan to get started</p>',
+                    unsafe_allow_html=True)
+with _hdr_col2:
+    if st.button("Edit Logic", key="open_editor_btn", use_container_width=True):
+        st.session_state.view = "editor"
+        st.rerun()
 
 # ---------------------------------------------------------------------------
 # Generate

@@ -1,0 +1,188 @@
+"""
+Customisation Editor — Main page that orchestrates all 4 editor sections.
+
+Sections:
+  1. Client Management (create / select / delete)
+  2. Slot Customization (toggle base slots)
+  3. Multi-Slot Configuration (slot count overrides)
+  4. Day-wise Theme Overrides
+
+Called from app.py when st.session_state.view == "editor".
+"""
+
+import streamlit as st
+from ui.api_client import MenuApiClient
+from customisation.client_editor import render_client_editor
+from customisation.slot_editor import render_slot_editor
+from customisation.multi_slot_editor import render_multi_slot_editor
+from customisation.theme_editor import render_theme_editor
+
+
+def _inject_editor_css():
+    """Inject editor-specific styles (same dark palette as main app)."""
+    st.markdown("""
+    <style>
+        .editor-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 0 1rem; border-bottom: 1px solid #262626;
+            margin-bottom: 1.5rem;
+        }
+        .editor-title {
+            font-size: 1.4rem; font-weight: 700; color: #f5f5f5;
+            letter-spacing: -0.3px; margin: 0;
+        }
+        .editor-subtitle {
+            font-size: 0.78rem; color: #737373; margin: 0.15rem 0 0;
+        }
+        .editor-section {
+            background: #171717; border: 1px solid #262626;
+            border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem;
+        }
+        .editor-save-bar {
+            position: sticky; bottom: 0; background: #0f0f0f;
+            padding: 1rem 0; border-top: 1px solid #262626;
+            z-index: 100;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+
+
+def render_customisation_editor(api: MenuApiClient):
+    """Main entry point for the customisation editor view."""
+    _inject_editor_css()
+
+    # --- Top bar ---
+    col_back, col_title = st.columns([1, 5])
+    with col_back:
+        if st.button("< Back to Menu", key="editor_back_btn", use_container_width=True):
+            st.session_state.view = "planner"
+            st.rerun()
+    with col_title:
+        st.markdown(
+            '<div><p class="editor-title">Customisation Editor</p>'
+            '<p class="editor-subtitle">Create or edit clients, slots, multi-slots, and day themes</p>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
+
+    st.markdown("")
+
+    # --- Load metadata ---
+    try:
+        metadata = api.get_editor_metadata()
+    except Exception as e:
+        st.error(f"Failed to load editor data: {e}")
+        return
+
+    # ============================================================
+    # Section 1: Client Management
+    # ============================================================
+    with st.container():
+        st.markdown('<div class="editor-section">', unsafe_allow_html=True)
+        selected_client = render_client_editor(api, metadata)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    if not selected_client:
+        st.markdown(
+            '<p style="color:#737373;text-align:center;padding:2rem;">'
+            'Select or create a client above to configure their menu settings.</p>',
+            unsafe_allow_html=True,
+        )
+        return
+
+    # --- Load client config ---
+    try:
+        config = api.get_client_config(selected_client)
+    except Exception as e:
+        st.error(f"Failed to load config for {selected_client}: {e}")
+        return
+
+    all_base_slots = metadata.get('base_slot_names', [])
+    const_slots = metadata.get('const_slots', [])
+    default_theme_map = metadata.get('default_theme_map', {})
+    available_themes = metadata.get('available_themes', [])
+
+    current_active = config.get('active_base_slots', [])
+    current_counts = config.get('slot_counts', {})
+    current_theme = config.get('theme_map', dict(default_theme_map))
+
+    # ============================================================
+    # Section 2: Slot Customization
+    # ============================================================
+    with st.container():
+        st.markdown('<div class="editor-section">', unsafe_allow_html=True)
+        new_active_slots = render_slot_editor(all_base_slots, current_active, const_slots)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ============================================================
+    # Section 3: Multi-Slot Configuration
+    # ============================================================
+    with st.container():
+        st.markdown('<div class="editor-section">', unsafe_allow_html=True)
+        new_slot_counts = render_multi_slot_editor(new_active_slots, current_counts, const_slots)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ============================================================
+    # Section 4: Day-wise Theme Override
+    # ============================================================
+    with st.container():
+        st.markdown('<div class="editor-section">', unsafe_allow_html=True)
+        new_theme_map = render_theme_editor(current_theme, default_theme_map, available_themes)
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    # ============================================================
+    # Save bar
+    # ============================================================
+    st.markdown("")
+    st.divider()
+
+    col_save, col_status = st.columns([1, 3])
+    with col_save:
+        save_clicked = st.button(
+            "Save All Changes",
+            type="primary",
+            key="editor_save_all",
+            use_container_width=True,
+        )
+    with col_status:
+        # Show change summary
+        changes = []
+        if set(new_active_slots) != set(current_active):
+            changes.append("slots")
+        count_changes = {k: v for k, v in new_slot_counts.items()
+                         if v != current_counts.get(k, 1) and k in new_active_slots}
+        if count_changes:
+            changes.append("multi-slots")
+        theme_changes = {k: v for k, v in new_theme_map.items()
+                         if v != current_theme.get(k)}
+        if theme_changes:
+            changes.append("themes")
+
+        if changes:
+            st.markdown(
+                f'<p style="color:#fdba74;font-size:0.82rem;margin:0.5rem 0;">'
+                f'Unsaved changes: {", ".join(changes)}</p>',
+                unsafe_allow_html=True,
+            )
+
+    if save_clicked:
+        payload = {}
+
+        # Slots changed?
+        if set(new_active_slots) != set(current_active):
+            payload['active_base_slots'] = new_active_slots
+
+        # Slot counts changed?
+        count_overrides = {k: v for k, v in new_slot_counts.items()
+                          if k in new_active_slots}
+        payload['slot_counts'] = count_overrides
+
+        # Theme changed?
+        payload['theme_map'] = new_theme_map
+
+        try:
+            api.update_client_config(selected_client, payload)
+            st.toast(f"Saved configuration for {selected_client}", icon="✓")
+            st.rerun()
+        except Exception as e:
+            st.error(f"Save failed: {e}")

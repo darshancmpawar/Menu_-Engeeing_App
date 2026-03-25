@@ -25,6 +25,7 @@ from api.config import (
 from src.preprocessor import ExcelReader, DataCleanser, ColumnMapper
 from src.preprocessor.pool_builder import PoolBuilder, BASE_SLOT_NAMES, CONST_SLOTS, REPEATABLE_ITEM_BASES
 from src.client import ClientConfigLoader
+from src.client.client_config import DEFAULT_THEME_MAP, AVAILABLE_THEMES
 from src.history import HistoryManager
 from src.menu_rules import MenuRuleLoader
 from src.solver.menu_solver import MenuSolver, SolverConfig
@@ -121,6 +122,7 @@ def _build_solver_config(df, client_cfg, start_date, num_days, time_limit):
         active_base_slots=active_base or None,
         explicit_dates=weekday_dates,
         premium_flag_col='is_premium_veg' if 'is_premium_veg' in df.columns and int(df['is_premium_veg'].sum()) > 0 else None,
+        theme_map=client_cfg.theme_map or None,
     )
 
 
@@ -167,7 +169,7 @@ def plan_menu():
 
         week_plan, plan_dates = solver.solve()
 
-        formatter = SolutionFormatter(week_plan, plan_dates)
+        formatter = SolutionFormatter(week_plan, plan_dates, theme_map=client_cfg.theme_map or None)
         return jsonify({
             'success': True,
             'message': f'Menu plan generated for {client_name}',
@@ -244,7 +246,7 @@ def regenerate_cells():
 
         week_plan, plan_dates = regen.regenerate(base_plan, replace_mask)
 
-        formatter = SolutionFormatter(week_plan, plan_dates)
+        formatter = SolutionFormatter(week_plan, plan_dates, theme_map=client_cfg.theme_map or None)
         return jsonify({
             'success': True,
             'message': f'Regenerated {sum(len(v) for v in replace_mask.values())} cells for {client_name}',
@@ -299,6 +301,118 @@ def save_plan():
         return jsonify({'success': False, 'error': str(e)}), 400
     except (FileNotFoundError, OSError) as e:
         logger.error("Save failed: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/v1/editor-metadata', methods=['GET'])
+def editor_metadata():
+    """Return metadata needed by the customisation editor UI."""
+    try:
+        loader = _get_client_loader()
+        return jsonify({
+            'success': True,
+            'base_slot_names': list(BASE_SLOT_NAMES),
+            'const_slots': list(CONST_SLOTS),
+            'default_theme_map': DEFAULT_THEME_MAP,
+            'available_themes': AVAILABLE_THEMES,
+            'menu_categories': loader.menu_categories,
+            'clients': loader.client_names,
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/v1/client-config/<client_name>', methods=['GET'])
+def get_client_config(client_name):
+    """Return the full editable config for one client."""
+    try:
+        loader = _get_client_loader()
+        cfg = loader.get_client(client_name)
+        cat_slots = loader.get_slots_for_menu_category(cfg.menu_category)
+        return jsonify({
+            'success': True,
+            'name': cfg.name,
+            'menu_category': cfg.menu_category,
+            'active_base_slots': [s for s in cat_slots if s not in CONST_SLOTS],
+            'slot_counts': cfg.slot_counts,
+            'theme_map': cfg.theme_map,
+        })
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/v1/client-config/<client_name>', methods=['PUT'])
+def update_client_config(client_name):
+    """Update a client's configuration (slots, slot counts, theme overrides)."""
+    global _client_loader
+    try:
+        data = request.get_json()
+        loader = _get_client_loader()
+
+        if 'active_base_slots' in data:
+            loader.update_client_slots(client_name, data['active_base_slots'])
+        if 'slot_counts' in data:
+            loader.update_client_slot_counts(client_name, data['slot_counts'])
+        if 'theme_map' in data:
+            loader.update_client_theme_overrides(client_name, data['theme_map'])
+        if 'menu_category' in data:
+            loader.update_client_menu_category(client_name, data['menu_category'])
+
+        # Reload to pick up changes
+        with _init_lock:
+            _client_loader = None
+
+        return jsonify({'success': True, 'message': f'Config updated for {client_name}'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        logger.error("Error updating client config: %s", e, exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/v1/client', methods=['POST'])
+def create_client():
+    """Create a new client."""
+    global _client_loader
+    try:
+        data = request.get_json()
+        name = data.get('name', '').strip()
+        menu_category = data.get('menu_category', '')
+        if not name:
+            return jsonify({'success': False, 'error': 'name is required'}), 400
+        if not menu_category:
+            return jsonify({'success': False, 'error': 'menu_category is required'}), 400
+
+        loader = _get_client_loader()
+        loader.create_client(name, menu_category)
+
+        with _init_lock:
+            _client_loader = None
+
+        return jsonify({'success': True, 'message': f'Client {name} created'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 400
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/v1/client/<client_name>', methods=['DELETE'])
+def delete_client(client_name):
+    """Delete a client."""
+    global _client_loader
+    try:
+        loader = _get_client_loader()
+        loader.delete_client(client_name)
+
+        with _init_lock:
+            _client_loader = None
+
+        return jsonify({'success': True, 'message': f'Client {client_name} deleted'})
+    except ValueError as e:
+        return jsonify({'success': False, 'error': str(e)}), 404
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
