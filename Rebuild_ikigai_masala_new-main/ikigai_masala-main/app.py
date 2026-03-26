@@ -35,9 +35,22 @@ from ui.formatters import (
     format_item_for_ui,
     format_item_html,
     slot_sort_key,
+    WEEKDAY_THEME_BADGES,
 )
+from customisation.main import render_customisation_editor
 
-logger = logging.getLogger(__name__)
+
+def _flatten_solution(raw_solution: dict) -> dict:
+    """Convert the nested API solution format into a flat {date: {slot: item}} dict."""
+    flat = {}
+    for date_key, day_data in raw_solution.items():
+        items = day_data.get("items", {}) if isinstance(day_data, dict) else {}
+        flat[date_key] = {
+            slot_id: slot_val.get("item", "") if isinstance(slot_val, dict) else str(slot_val)
+            for slot_id, slot_val in items.items()
+        }
+    return flat
+
 
 # ---------------------------------------------------------------------------
 # Auto-start Flask API backend
@@ -71,17 +84,6 @@ def _ensure_backend_running():
             time.sleep(0.5)
     return False
 
-
-# ---------------------------------------------------------------------------
-# Theme badges (dark-mode friendly)
-# ---------------------------------------------------------------------------
-_THEME_COLORS = {
-    0: ("#22543d", "#86efac", "Mix"),
-    1: ("#7c2d12", "#fdba74", "Chinese"),
-    2: ("#7f1d1d", "#fca5a5", "Biryani"),
-    3: ("#1e3a5f", "#93c5fd", "South Indian"),
-    4: ("#4c1d95", "#c4b5fd", "North Indian"),
-}
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -211,13 +213,28 @@ client = MenuApiClient(_BACKEND_URL)
 # ---------------------------------------------------------------------------
 # Session state
 # ---------------------------------------------------------------------------
-for key, default in [("plan", None), ("plan_dates", []),
-                     ("client_name", None), ("changes_log", [])]:
+_SESSION_DEFAULTS = {
+    "plan": None,
+    "plan_dates": [],
+    "client_name": None,
+    "changes_log": [],
+    "view": "planner",
+    # Editor state
+    "editor_confirm_delete": False,
+}
+for key, default in _SESSION_DEFAULTS.items():
     if key not in st.session_state:
         st.session_state[key] = default
 
 # ---------------------------------------------------------------------------
-# Sidebar
+# Editor view — full page, no sidebar
+# ---------------------------------------------------------------------------
+if st.session_state.view == "editor":
+    render_customisation_editor(client)
+    st.stop()
+
+# ---------------------------------------------------------------------------
+# Sidebar (planner view only)
 # ---------------------------------------------------------------------------
 with st.sidebar:
     st.markdown("""<div class="sidebar-brand">
@@ -249,14 +266,19 @@ with st.sidebar:
 # ---------------------------------------------------------------------------
 # Page header
 # ---------------------------------------------------------------------------
-st.markdown('<p class="page-title">Menu Plan</p>', unsafe_allow_html=True)
-
-if st.session_state.client_name:
-    st.markdown(f'<p class="page-subtitle">{st.session_state.client_name}</p>',
-                unsafe_allow_html=True)
-else:
-    st.markdown('<p class="page-subtitle">Generate a plan to get started</p>',
-                unsafe_allow_html=True)
+_hdr_col1, _hdr_col2 = st.columns([5, 1])
+with _hdr_col1:
+    st.markdown('<p class="page-title">Menu Plan</p>', unsafe_allow_html=True)
+    if st.session_state.client_name:
+        st.markdown(f'<p class="page-subtitle">{st.session_state.client_name}</p>',
+                    unsafe_allow_html=True)
+    else:
+        st.markdown('<p class="page-subtitle">Generate a plan to get started</p>',
+                    unsafe_allow_html=True)
+with _hdr_col2:
+    if st.button("Edit Logic", key="open_editor_btn", use_container_width=True):
+        st.session_state.view = "editor"
+        st.rerun()
 
 # ---------------------------------------------------------------------------
 # Generate
@@ -271,14 +293,7 @@ if generate_clicked:
                     num_days=num_days,
                     time_limit_seconds=time_limit,
                 )
-                raw_solution = result.get("solution", {})
-                flat_plan = {}
-                for date_key, day_data in raw_solution.items():
-                    items = day_data.get("items", {}) if isinstance(day_data, dict) else {}
-                    flat_plan[date_key] = {
-                        slot_id: slot_val.get("item", "") if isinstance(slot_val, dict) else str(slot_val)
-                        for slot_id, slot_val in items.items()
-                    }
+                flat_plan = _flatten_solution(result.get("solution", {}))
                 st.session_state.plan = flat_plan
                 st.session_state.plan_dates = sorted(flat_plan.keys())
                 st.session_state.client_name = selected_client
@@ -321,7 +336,7 @@ if plan and plan_dates:
     for d_str in plan_dates:
         d = dt.date.fromisoformat(d_str)
         wd = d.weekday()
-        bg, fg, label = _THEME_COLORS.get(wd, ("#262626", "#a3a3a3", ""))
+        bg, fg, label = WEEKDAY_THEME_BADGES.get(wd, ("#262626", "#a3a3a3", ""))
         header_html += (
             f'<th><span class="day-label">{d.strftime("%a %d %b")}</span>'
             f'<span class="theme-tag" style="background:{bg};color:{fg};">'
@@ -380,7 +395,7 @@ if plan and plan_dates:
         for i, d_str in enumerate(plan_dates):
             d = dt.date.fromisoformat(d_str)
             wd = d.weekday()
-            bg, fg, label = _THEME_COLORS.get(wd, ("#262626", "#a3a3a3", ""))
+            bg, fg, label = WEEKDAY_THEME_BADGES.get(wd, ("#262626", "#a3a3a3", ""))
             col = cols[i % len(cols)]
             with col:
                 st.markdown(
@@ -405,14 +420,7 @@ if plan and plan_dates:
                             start_date=plan_dates[0],
                             num_days=len(plan_dates),
                             time_limit_seconds=time_limit)
-                        raw_regen = result.get("solution", {})
-                        flat_regen = {}
-                        for date_key, day_data in raw_regen.items():
-                            items = day_data.get("items", {}) if isinstance(day_data, dict) else {}
-                            flat_regen[date_key] = {
-                                slot_id: slot_val.get("item", "") if isinstance(slot_val, dict) else str(slot_val)
-                                for slot_id, slot_val in items.items()
-                            }
+                        flat_regen = _flatten_solution(result.get("solution", {}))
                         st.session_state.plan = flat_regen if flat_regen else plan
                         st.session_state.plan_dates = sorted(st.session_state.plan.keys())
                         n = sum(len(v) for v in regen_selections.values())

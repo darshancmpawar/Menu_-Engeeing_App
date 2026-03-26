@@ -92,3 +92,52 @@ class MenuApiClient:
         if not data.get("success"):
             raise RuntimeError(data.get("error", "Save failed"))
         return data
+
+    # ----- Customisation editor endpoints -----
+
+    def get_editor_metadata(self) -> Dict[str, Any]:
+        resp = self.session.get(f"{self.base_url}/api/v1/editor-metadata", timeout=10)
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get("success"):
+            raise RuntimeError(data.get("error", "Failed to load metadata"))
+        return data
+
+    def get_client_config(self, client_name: str) -> Dict[str, Any]:
+        resp = self.session.get(
+            f"{self.base_url}/api/v1/client-config/{client_name}", timeout=10
+        )
+        resp.raise_for_status()
+        data = resp.json()
+        if not data.get("success"):
+            raise RuntimeError(data.get("error", "Failed to load config"))
+        return data
+
+    def update_client_config(self, client_name: str, config: Dict[str, Any]) -> Dict[str, Any]:
+        resp = self.session.put(
+            f"{self.base_url}/api/v1/client-config/{client_name}",
+            json=config, timeout=10
+        )
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        if not resp.ok or not data.get("success"):
+            raise RuntimeError(data.get("error", f"Save failed ({resp.status_code})"))
+        return data
+
+    def create_client(self, name: str, menu_category: str) -> Dict[str, Any]:
+        resp = self.session.post(
+            f"{self.base_url}/api/v1/client",
+            json={"name": name, "menu_category": menu_category}, timeout=10
+        )
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        if not resp.ok or not data.get("success"):
+            raise RuntimeError(data.get("error", f"Create failed ({resp.status_code})"))
+        return data
+
+    def delete_client(self, client_name: str) -> Dict[str, Any]:
+        resp = self.session.delete(
+            f"{self.base_url}/api/v1/client/{client_name}", timeout=10
+        )
+        data = resp.json() if resp.headers.get("content-type", "").startswith("application/json") else {}
+        if not resp.ok or not data.get("success"):
+            raise RuntimeError(data.get("error", f"Delete failed ({resp.status_code})"))
+        return data
