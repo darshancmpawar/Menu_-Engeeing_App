@@ -6,6 +6,7 @@ These helpers are used by menu_solver, solution_formatter, and regenerator.
 
 import datetime as dt
 import re
+from typing import Dict, Optional
 
 
 def weekday_type(d: dt.date) -> str:
@@ -15,6 +16,15 @@ def weekday_type(d: dt.date) -> str:
         'monday': 'mix', 'tuesday': 'chinese', 'wednesday': 'biryani',
         'thursday': 'south', 'friday': 'north',
     }.get(wd, 'holiday' if wd in ('saturday', 'sunday') else 'normal')
+
+
+def weekday_type_for_config(d: dt.date, theme_map: Optional[Dict[str, str]] = None) -> str:
+    """Return the theme type using per-client overrides if provided."""
+    if theme_map:
+        wd = d.strftime('%A').lower()
+        if wd in theme_map:
+            return theme_map[wd]
+    return weekday_type(d)
 
 
 def theme_label(day_type: str) -> str:

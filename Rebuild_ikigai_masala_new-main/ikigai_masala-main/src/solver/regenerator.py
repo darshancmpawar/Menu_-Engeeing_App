@@ -7,13 +7,12 @@ Uses similarity scoring to prefer items similar to the originals.
 from __future__ import annotations
 
 import datetime as dt
-import random
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import pandas as pd
 
 from ._helpers import strip_color_suffix as _strip_color_suffix
-from .menu_solver import MenuSolver, SolverConfig, REGEN_CAP_MULTIPLIER, REGEN_SIMILARITY_PENALTY
+from .menu_solver import MenuSolver, SolverConfig, REGEN_SIMILARITY_PENALTY
 from ..preprocessor.column_mapper import _norm_str, _norm_color
 
 
@@ -102,15 +101,6 @@ class MenuRegenerator:
                 if old_item:
                     forbidden[d, slot_id] = {old_item}
 
-        # Build item lookup
-        by_item = {}
-        for _, row in self.df.iterrows():
-            it = _norm_str(row.get('item', ''))
-            if it and it not in by_item:
-                by_item[it] = row
-
-        # Create solver with higher caps for regeneration
-        regen_caps = {k: int(v * REGEN_CAP_MULTIPLIER) for k, v in MenuSolver.CAP_BY_SLOT_BASE.items()}
         solver = MenuSolver(
             pools=self.pools,
             solver_config=self.cfg,

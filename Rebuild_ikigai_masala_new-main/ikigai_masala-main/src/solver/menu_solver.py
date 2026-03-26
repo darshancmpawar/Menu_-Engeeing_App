@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 import pandas as pd
 from ortools.sat.python import cp_model
 
-from ._helpers import weekday_type as _weekday_type
+from ._helpers import weekday_type_for_config as _weekday_type_cfg
 from ..menu_rules.base_menu_rule import BaseMenuRule
 from ..preprocessor.pool_builder import (
     BASE_SLOT_NAMES, CONSTANT_ITEMS, EXEMPT_FROM_CUISINE,
@@ -64,6 +64,8 @@ class SolverConfig:
     seed: int = 7
     time_limit_sec: int = 240
     slot_counts: Optional[Dict[str, int]] = None
+    active_base_slots: Optional[List[str]] = None
+    explicit_dates: Optional[List[dt.date]] = None
     # Color constraints
     color_col: str = 'item_color'
     color_slots: List[str] = field(default_factory=lambda: [
@@ -105,6 +107,8 @@ class SolverConfig:
     cap_multipliers: Tuple[int, ...] = DEFAULT_CAP_MULTIPLIERS
     restarts_per_multiplier: int = DEFAULT_RESTARTS_PER_MULTIPLIER
     deterministic: bool = True
+    # Per-client theme map (overrides global weekday_type)
+    theme_map: Optional[Dict[str, str]] = None
 
 
 # ---------------------------------------------------------------------------
@@ -235,9 +239,13 @@ class MenuSolver:
         Returns:
             (week_plan, dates) where week_plan maps date -> {slot_id: item_string}
         """
-        dates = [self.cfg.start_date + dt.timedelta(days=i) for i in range(self.cfg.days)]
+        if self.cfg.explicit_dates:
+            dates = list(self.cfg.explicit_dates)
+        else:
+            dates = [self.cfg.start_date + dt.timedelta(days=i) for i in range(self.cfg.days)]
+        base_slots = self.cfg.active_base_slots or BASE_SLOT_NAMES
         expanded_slots = _expand_slots_in_order(
-            BASE_SLOT_NAMES, self.cfg.slot_counts or {s: 1 for s in BASE_SLOT_NAMES}
+            base_slots, self.cfg.slot_counts or {s: 1 for s in base_slots}
         )
 
         cap_multipliers = self.cfg.cap_multipliers
@@ -331,7 +339,7 @@ class MenuSolver:
         }
 
         for di, d in enumerate(dates):
-            day_type = _weekday_type(d)
+            day_type = _weekday_type_cfg(d, self.cfg.theme_map)
 
             # First pass: build base-slot level pools (shared across slot numbers)
             base_pools: Dict[str, pd.DataFrame] = {}
@@ -413,7 +421,7 @@ class MenuSolver:
     ) -> Dict:
         rng = random.Random(self.cfg.seed)
         model = cp_model.CpModel()
-        day_types = [_weekday_type(d) for d in dates]
+        day_types = [_weekday_type_cfg(d, self.cfg.theme_map) for d in dates]
 
         known_colors, known_welcome_colors = self._collect_known_colors(cells)
         build_result = self._build_decision_variables(

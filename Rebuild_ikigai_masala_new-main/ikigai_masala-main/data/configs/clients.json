@@ -40,5 +40,6 @@
   },
   "core_min_one_slots": ["bread", "rice", "starter", "veg_dry", "welcome_drink", "curd_side", "nonveg_main", "veg_gravy"],
   "constant_slots": ["white_rice", "papad", "pickle", "chutney"],
-  "fallback_menu_category": "menu_cat_3"
+  "fallback_menu_category": "menu_cat_3",
+  "theme_overrides": {}
 }

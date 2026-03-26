@@ -69,6 +69,11 @@
     {
       "name": "prefer_nonveg_dry_slot2",
       "type": "nonveg_dry_preference"
+    },
+    {
+      "name": "nonveg_biryani_once_per_week",
+      "type": "nonveg_biryani_weekly",
+      "max_per_week": 1
     }
   ]
 }

@@ -6,13 +6,17 @@ Handles slot-based output format with color suffixes and constant items.
 
 import datetime as dt
 import logging
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 
 import pandas as pd
 
 logger = logging.getLogger(__name__)
 
-from ._helpers import weekday_type as _weekday_type, theme_label as _theme_label, strip_color_suffix as _strip_color_suffix
+from ._helpers import (
+    weekday_type_for_config as _weekday_type_cfg,
+    theme_label as _theme_label,
+    strip_color_suffix as _strip_color_suffix,
+)
 from ..preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, _base_slot, _slot_num
 
 
@@ -30,9 +34,11 @@ class SolutionFormatter:
     Expects week_plan = {date: {slot_id: item_string_with_color}}
     """
 
-    def __init__(self, week_plan: Dict[dt.date, Dict[str, str]], dates: List[dt.date]):
+    def __init__(self, week_plan: Dict[dt.date, Dict[str, str]], dates: List[dt.date],
+                 theme_map: Optional[Dict[str, str]] = None):
         self.week_plan = week_plan
         self.dates = dates
+        self._theme_map = theme_map
 
     def print_summary(self) -> None:
         print("\n" + "=" * 60)
@@ -40,7 +46,7 @@ class SolutionFormatter:
         print("=" * 60)
         print(f"\nGenerated menu for {len(self.dates)} days")
         for d in self.dates:
-            day_type = _weekday_type(d)
+            day_type = _weekday_type_cfg(d, self._theme_map)
             items = self.week_plan.get(d, {})
             slot_count = len([s for s in items if s not in CONST_SLOTS])
             print(f"  {d.isoformat()} ({_theme_label(day_type)}): {slot_count} items")
@@ -56,7 +62,7 @@ class SolutionFormatter:
                 break
 
         cols = [
-            f"{_theme_label(_weekday_type(d))}-{d.strftime('%A')}({d.isoformat()})"
+            f"{_theme_label(_weekday_type_cfg(d, self._theme_map))}-{d.strftime('%A')}({d.isoformat()})"
             for d in self.dates
         ]
 
@@ -90,7 +96,7 @@ class SolutionFormatter:
         result = {}
         for d in self.dates:
             day_key = d.isoformat()
-            day_type = _weekday_type(d)
+            day_type = _weekday_type_cfg(d, self._theme_map)
             result[day_key] = {
                 'theme': _theme_label(day_type),
                 'day_type': day_type,
