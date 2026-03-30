@@ -18,7 +18,7 @@ from typing import Dict, Any, Set
 
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
-from ..preprocessor.pool_builder import EXEMPT_FROM_CUISINE
+from src.constants import EXEMPT_FROM_CUISINE
 from ..preprocessor.column_mapper import _norm_str, _to_bool01
 
 

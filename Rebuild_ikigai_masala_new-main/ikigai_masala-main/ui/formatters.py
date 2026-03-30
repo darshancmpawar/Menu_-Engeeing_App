@@ -5,7 +5,7 @@ UI formatting utilities for menu plan display.
 import re
 from typing import Dict, Optional
 
-from src.preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, BASE_SLOT_NAMES
+from src.constants import DISPLAY_SLOT_NAME, CONST_SLOTS, BASE_SLOT_NAMES
 
 
 # Day-of-week theme labels (Monday=0)

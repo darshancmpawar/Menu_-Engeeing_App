@@ -9,7 +9,7 @@ from typing import Dict, Any
 
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
-from ..preprocessor.pool_builder import REPEATABLE_ITEM_BASES
+from src.constants import REPEATABLE_ITEM_BASES
 
 logger = logging.getLogger(__name__)
 

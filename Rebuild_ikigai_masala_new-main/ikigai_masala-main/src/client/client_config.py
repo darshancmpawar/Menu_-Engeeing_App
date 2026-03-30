@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, List, Optional, Set
 
-from src.preprocessor.pool_builder import (
+from src.constants import (
     BASE_SLOT_NAMES as BASE_SLOTS,
     CONST_SLOTS,
     SLOT_SUFFIX_SEP,

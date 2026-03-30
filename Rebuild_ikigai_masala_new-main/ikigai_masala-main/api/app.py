@@ -24,7 +24,8 @@ from api.config import (
     MIN_NUM_DAYS, MAX_NUM_DAYS, MIN_TIME_LIMIT_SECONDS, MAX_TIME_LIMIT_SECONDS,
 )
 from src.preprocessor import ExcelReader, DataCleanser, ColumnMapper
-from src.preprocessor.pool_builder import PoolBuilder, BASE_SLOT_NAMES, CONST_SLOTS, REPEATABLE_ITEM_BASES
+from src.preprocessor.pool_builder import PoolBuilder
+from src.constants import BASE_SLOT_NAMES, CONST_SLOTS, REPEATABLE_ITEM_BASES
 from src.client import ClientConfigLoader
 from src.client.client_config import DEFAULT_THEME_MAP, AVAILABLE_THEMES
 from src.history import HistoryManager

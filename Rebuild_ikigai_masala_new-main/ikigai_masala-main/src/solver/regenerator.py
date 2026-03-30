@@ -80,7 +80,8 @@ class MenuRegenerator:
         if sum(len(v) for v in replace_mask.values()) == 0:
             return base_plan, dates
 
-        from ..preprocessor.pool_builder import _expand_slots_in_order, BASE_SLOT_NAMES
+        from src.constants import BASE_SLOT_NAMES
+        from ..preprocessor.pool_builder import _expand_slots_in_order
         expanded_slots = _expand_slots_in_order(
             BASE_SLOT_NAMES, self.cfg.slot_counts or {s: 1 for s in BASE_SLOT_NAMES}
         )

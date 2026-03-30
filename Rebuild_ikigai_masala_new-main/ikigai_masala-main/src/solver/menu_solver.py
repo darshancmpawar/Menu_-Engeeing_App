@@ -20,11 +20,11 @@ from ortools.sat.python import cp_model
 
 from ._helpers import weekday_type_for_config as _weekday_type_cfg
 from ..menu_rules.base_menu_rule import BaseMenuRule
-from ..preprocessor.pool_builder import (
+from src.constants import (
     BASE_SLOT_NAMES, CONSTANT_ITEMS, EXEMPT_FROM_CUISINE,
     THEME_FALLBACK_SLOTS, SLOT_SUFFIX_SEP,
-    _base_slot, _slot_num, _expand_slots_in_order,
 )
+from ..preprocessor.pool_builder import _base_slot, _slot_num, _expand_slots_in_order
 from ..preprocessor.column_mapper import _norm_str, _norm_color, _to_bool01
 from .solver_context import SolverContext
 

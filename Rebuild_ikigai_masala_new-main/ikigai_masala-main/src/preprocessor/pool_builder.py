@@ -10,55 +10,11 @@ from typing import Dict, List, Optional, Set
 import pandas as pd
 
 from .column_mapper import _norm_str
-
-# ---------------------------------------------------------------------------
-# Constants (match old menu_eng_latest_v27.py)
-# ---------------------------------------------------------------------------
-
-SLOT_SUFFIX_SEP = '__'
-
-BASE_SLOT_NAMES: List[str] = [
-    'welcome_drink', 'soup', 'salad', 'starter', 'bread', 'rice',
-    'healthy_rice', 'dal', 'sambar', 'rasam', 'veg_gravy', 'veg_dry',
-    'nonveg_main', 'curd_side', 'dessert',
-]
-
-CONST_SLOTS: List[str] = ['white_rice', 'papad', 'pickle', 'chutney']
-
-OUTPUT_SLOTS: List[str] = BASE_SLOT_NAMES + CONST_SLOTS
-
-CONSTANT_ITEMS: Dict[str, str] = {
-    'white_rice': 'steamed rice',
-    'papad': 'Papad',
-    'pickle': 'Pickle',
-    'chutney': 'chutney',
-}
-
-EXEMPT_FROM_CUISINE: Set[str] = {
-    'welcome_drink', 'dal', 'sambar', 'rasam', 'starter', 'soup', 'salad', 'healthy_rice',
-}
-
-REPEATABLE_ITEM_BASES: Set[str] = {'curd'}
-
-PULAO_SUBCATS: Set[str] = {
-    'south_veg_pulao', 'north_simple_veg_pulao', 'north_rich_pulao',
-    'millet_pulao', 'mixed_grain_pulao',
-}
-
-THEME_FALLBACK_SLOTS: Set[str] = {'starter', 'veg_dry'}
-
-DISPLAY_SLOT_NAME: Dict[str, str] = {
-    'rice': 'Flavor Rice',
-    'healthy_rice': 'Healthy Rice',
-    'white_rice': 'White Rice',
-    'welcome_drink': 'Welcome Drink',
-    'soup': 'Soup',
-    'salad': 'Salad',
-    'veg_gravy': 'Veg Gravy',
-    'veg_dry': 'Veg Dry',
-    'nonveg_main': 'Nonveg Main',
-    'curd_side': 'Curd Side',
-}
+from src.constants import (
+    SLOT_SUFFIX_SEP, BASE_SLOT_NAMES, CONST_SLOTS, OUTPUT_SLOTS,
+    CONSTANT_ITEMS, EXEMPT_FROM_CUISINE, REPEATABLE_ITEM_BASES,
+    PULAO_SUBCATS, THEME_FALLBACK_SLOTS, DISPLAY_SLOT_NAME,
+)
 
 # course_type -> slot mapping for simple 1:1 cases
 _SIMPLE_MAPPING: Dict[str, Set[str]] = {

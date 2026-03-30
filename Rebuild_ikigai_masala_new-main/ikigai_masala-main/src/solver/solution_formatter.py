@@ -17,7 +17,8 @@ from ._helpers import (
     theme_label as _theme_label,
     strip_color_suffix as _strip_color_suffix,
 )
-from ..preprocessor.pool_builder import DISPLAY_SLOT_NAME, CONST_SLOTS, _base_slot, _slot_num
+from src.constants import DISPLAY_SLOT_NAME, CONST_SLOTS
+from ..preprocessor.pool_builder import _base_slot, _slot_num
 
 
 def _display_slot(slot_id: str) -> str:

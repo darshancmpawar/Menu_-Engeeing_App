@@ -6,7 +6,7 @@ from typing import Dict, Any, Set
 from ortools.sat.python import cp_model
 from .base_menu_rule import BaseMenuRule, MenuRuleType
 from ..preprocessor.column_mapper import _norm_str
-from ..preprocessor.pool_builder import PULAO_SUBCATS
+from src.constants import PULAO_SUBCATS
 
 
 class CurdSideMenuRule(BaseMenuRule):
